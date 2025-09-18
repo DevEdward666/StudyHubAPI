@@ -1,12 +1,19 @@
 ﻿using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Runtime.Serialization;
 
 namespace Study_Hub.Models.Entities
 {
     public enum UserRole
     {
+        [EnumMember(Value = "admin")]
         Admin,
+
+        [EnumMember(Value = "user")]
+        User,
+
+        [EnumMember(Value = "super_admin")]
         SuperAdmin
     }
 
@@ -24,9 +31,6 @@ namespace Study_Hub.Models.Entities
         [Required]
         [Column("role")]
         public UserRole Role { get; set; } = UserRole.Admin;
-
-        [Column("permissions")]
-        public string[] Permissions { get; set; } = { "approve_transactions", "manage_tables", "manage_users" };
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }

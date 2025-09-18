@@ -60,7 +60,6 @@ namespace Study_Hub.Services
                 UserId = userId,
                 Amount = request.Amount,
                 Cost = cost,
-                Status = TransactionStatus.Pending,
                 PaymentMethod = request.PaymentMethod,
                 TransactionId = request.TransactionId,
                 CreatedAt = DateTime.UtcNow,

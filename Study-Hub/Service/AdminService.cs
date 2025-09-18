@@ -23,10 +23,9 @@ namespace Study_Hub.Services
         public async Task<List<UserWithInfoDto>> GetAllUsersAsync()
         {
             var users = await _context.Users
-                .Include(u => u.UserCredits)
-                .Include(u => u.AdminUser)
-                .Include(u => u.TableSessions.Where(ts => ts.Status == SessionStatus.Active))
-                .ToListAsync();
+             .Include(u => u.UserCredits)
+             .Include(u => u.TableSessions)
+             .ToListAsync();
 
             return users.Select(user => new UserWithInfoDto
             {
@@ -35,7 +34,7 @@ namespace Study_Hub.Services
                 Name = user.Name,
                 Credits = user.UserCredits?.Balance ?? 0,
                 IsAdmin = user.AdminUser != null,
-                HasActiveSession = user.TableSessions.Any(ts => ts.Status == SessionStatus.Active),
+                HasActiveSession = user.TableSessions?.Any(ts => ts.Status == SessionStatus.Active) ?? false, // Null check here
                 CreatedAt = user.CreatedAt
             }).ToList();
         }
@@ -154,7 +153,6 @@ namespace Study_Hub.Services
             {
                 UserId = user.Id,
                 Role = UserRole.Admin,
-                Permissions = new[] { "approve_transactions", "manage_tables", "manage_users" },
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -180,7 +178,6 @@ namespace Study_Hub.Services
                 {
                     UserId = userId,
                     Role = UserRole.Admin,
-                    Permissions = new[] { "approve_transactions", "manage_tables", "manage_users" },
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };

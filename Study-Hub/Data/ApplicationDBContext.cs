@@ -38,15 +38,9 @@ namespace Study_Hub.Data
 
             modelBuilder.Entity<AdminUser>()
                 .Property(e => e.Role)
-                .HasConversion<string>();
-
-            // Configure array property for AdminUser.Permissions
-            modelBuilder.Entity<AdminUser>()
-                .Property(e => e.Permissions)
-                .HasConversion(
-                    v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
-                    v => JsonSerializer.Deserialize<string[]>(v, (JsonSerializerOptions)null));
-
+                 .HasConversion(
+                    v => v.ToString().ToLower(),  // to DB
+                    v => Enum.Parse<UserRole>(v.ToLower(), true)); // from DB
             // Configure unique indexes
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
