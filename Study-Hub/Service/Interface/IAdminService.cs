@@ -10,6 +10,8 @@ namespace Study_Hub.Services.Interfaces
         Task<bool> ApproveTransactionAsync(Guid transactionId, Guid adminUserId);
         Task<bool> RejectTransactionAsync(Guid transactionId, Guid adminUserId);
         Task<CreateTableResponseDto> CreateStudyTableAsync(CreateTableRequestDto request);
+        Task<UpdateTableResponseDto> UpdateStudyTableAsync(UpdateTableRequestDto request);
+        Task<SelectedTableResponseDto> SelectedStudyTableAsync(SelectedTableRequestDto request);
         Task<bool> MakeUserAdminAsync(string userEmail);
         Task<ToggleUserAdminResponseDto> ToggleUserAdminAsync(Guid userId);
         Task<QRGenerationResponseDto> GenerateTableQRAsync(Guid tableId);

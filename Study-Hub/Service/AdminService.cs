@@ -138,7 +138,40 @@ namespace Study_Hub.Services
                 QrCode = qrCode
             };
         }
+        public async Task<UpdateTableResponseDto> UpdateStudyTableAsync(UpdateTableRequestDto request)
+        {
+            var studyTable = await _context.StudyTables.FirstOrDefaultAsync(u => u.Id.ToString() == request.TableID);
+            if (studyTable == null)
+                throw new InvalidOperationException("User not found");
+            studyTable.TableNumber = request.TableNumber;
+            studyTable.Location = request.Location;
+            studyTable.Capacity = request.Capacity;
+            studyTable.HourlyRate = request.HourlyRate;
+            studyTable.UpdatedAt = DateTime.UtcNow;
 
+            await _context.SaveChangesAsync();
+
+            return new UpdateTableResponseDto
+            {
+                TableNumber = studyTable.TableNumber,
+                QrCode = studyTable.QrCode
+            };
+        }
+        public async Task<SelectedTableResponseDto> SelectedStudyTableAsync(SelectedTableRequestDto request)
+        {
+            var studyTable = await _context.StudyTables.FirstOrDefaultAsync(u => u.Id.ToString() == request.TableID);
+            if (studyTable == null)
+                throw new InvalidOperationException("User not found");
+            return new SelectedTableResponseDto
+            {
+                TableID = request.TableID,
+                TableNumber = studyTable.TableNumber,
+                Location = studyTable.Location,
+                Capacity = studyTable.Capacity,
+                HourlyRate = studyTable.HourlyRate,
+                QrCode = studyTable.QrCode
+            };
+        }
         public async Task<bool> MakeUserAdminAsync(string userEmail)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);

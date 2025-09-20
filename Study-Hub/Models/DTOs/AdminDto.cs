@@ -46,13 +46,50 @@ namespace Study_Hub.Models.DTOs
         [Range(1, int.MaxValue, ErrorMessage = "Capacity must be positive")]
         public int Capacity { get; set; }
     }
+    public class UpdateTableRequestDto
+    {
+        [Required]
+        public string TableID { get; set; }
+        [Required]
+        public string TableNumber { get; set; }
 
+        [Required]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Hourly rate must be positive")]
+        public decimal HourlyRate { get; set; }
+
+        [Required]
+        public string Location { get; set; }
+
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Capacity must be positive")]
+        public int Capacity { get; set; }
+    }
+    public class SelectedTableRequestDto
+    {
+        public string TableID { get; set; }
+    }
     public class CreateTableResponseDto
     {
         public Guid TableId { get; set; }
         public string QrCode { get; set; }
     }
+    public class UpdateTableResponseDto
+    {
+        public string TableNumber { get; set; }
+        public string QrCode { get; set; }
+    }
+    public class SelectedTableResponseDto
+    {
+        public string TableID { get; set; }
+        public string TableNumber { get; set; }
 
+        public decimal HourlyRate { get; set; }
+
+        public string Location { get; set; }
+
+        public int Capacity { get; set; }
+        public string QrCode { get; set; }
+    }
     public class MakeUserAdminRequestDto
     {
         [Required]

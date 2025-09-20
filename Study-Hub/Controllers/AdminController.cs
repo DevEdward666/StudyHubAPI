@@ -129,6 +129,40 @@ namespace StudyHubApi.Controllers
                 return BadRequest(ApiResponse<CreateTableResponseDto>.ErrorResponse(ex.Message));
             }
         }
+        [HttpPut("tables/update")]
+        public async Task<ActionResult<ApiResponse<UpdateTableResponseDto>>> UpdateTable([FromBody] UpdateTableRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _adminService.UpdateStudyTableAsync(request);
+                return Ok(ApiResponse<UpdateTableResponseDto>.SuccessResponse(result, "Table updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<UpdateTableResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+        [HttpPost("tables/selected")]
+        public async Task<ActionResult<ApiResponse<SelectedTableResponseDto>>> SelectedTable([FromBody] SelectedTableRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _adminService.SelectedStudyTableAsync(request);
+                return Ok(ApiResponse<SelectedTableResponseDto>.SuccessResponse(result, "Selected Table"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<SelectedTableResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
 
         [HttpPost("users/make-admin")]
         public async Task<ActionResult<ApiResponse<bool>>> MakeUserAdmin([FromBody] MakeUserAdminRequestDto request)
