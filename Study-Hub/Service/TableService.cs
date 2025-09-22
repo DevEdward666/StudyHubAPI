@@ -61,7 +61,7 @@ namespace StudyHubApi.Services
                     TableId = request.TableId,
                     StartTime = DateTime.UtcNow,
                     CreditsUsed = 0,
-                    Status = SessionStatus.Active,
+                    Status = SessionStatus.active,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -72,8 +72,9 @@ namespace StudyHubApi.Services
 
                 return session.Id;
             }
-            catch
+            catch(Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 await transaction.RollbackAsync();
                 throw;
             }
@@ -91,7 +92,7 @@ namespace StudyHubApi.Services
                 if (session == null)
                     throw new InvalidOperationException("Session not found or unauthorized");
 
-                if (session.Status != SessionStatus.Active)
+                if (session.Status != SessionStatus.active)
                     throw new InvalidOperationException("Session is not active");
 
                 var endTime = DateTime.UtcNow;
@@ -113,7 +114,7 @@ namespace StudyHubApi.Services
                 // Update session
                 session.EndTime = endTime;
                 session.CreditsUsed = creditsUsed;
-                session.Status = SessionStatus.Completed;
+                session.Status = SessionStatus.completed;
                 session.UpdatedAt = DateTime.UtcNow;
 
                 // Free up table
@@ -141,7 +142,7 @@ namespace StudyHubApi.Services
         {
             var session = await _context.TableSessions
                 .Include(ts => ts.Table)
-                .FirstOrDefaultAsync(ts => ts.UserId == userId && ts.Status == SessionStatus.Active);
+                .FirstOrDefaultAsync(ts => ts.UserId == userId && ts.Status == SessionStatus.active);
 
             return session != null ? MapToSessionWithTableDto(session) : null;
         }

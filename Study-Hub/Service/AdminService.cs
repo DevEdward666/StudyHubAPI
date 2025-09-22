@@ -34,7 +34,7 @@ namespace Study_Hub.Services
                 Name = user.Name,
                 Credits = user.UserCredits?.Balance ?? 0,
                 IsAdmin = user.AdminUser != null,
-                HasActiveSession = user.TableSessions?.Any(ts => ts.Status == SessionStatus.Active) ?? false, // Null check here
+                HasActiveSession = user.TableSessions?.Any(ts => ts.Status == SessionStatus.active) ?? false, // Null check here
                 CreatedAt = user.CreatedAt
             }).ToList();
         }

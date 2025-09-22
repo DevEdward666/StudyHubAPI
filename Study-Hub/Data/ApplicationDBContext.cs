@@ -32,9 +32,14 @@ namespace Study_Hub.Data
                 .Property(e => e.Status)
                 .HasConversion<string>();
 
+            modelBuilder.HasPostgresEnum<SessionStatus>("session_status");
+
             modelBuilder.Entity<TableSession>()
                 .Property(e => e.Status)
-                .HasConversion<string>();
+                .HasConversion(
+                    v => v.ToString(),                            // to database: "active"
+                    v => (SessionStatus)Enum.Parse(typeof(SessionStatus), v)) // from db
+                .HasColumnType("session_status");
 
             modelBuilder.Entity<AdminUser>()
                 .Property(e => e.Role)

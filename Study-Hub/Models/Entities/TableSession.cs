@@ -6,8 +6,8 @@ namespace Study_Hub.Models.Entities
 {
     public enum SessionStatus
     {
-        Active,
-        Completed
+        active,
+        completed
     }
 
     [Table("table_sessions")]
@@ -37,7 +37,7 @@ namespace Study_Hub.Models.Entities
 
         [Required]
         [Column("status")]
-        public SessionStatus Status { get; set; } = SessionStatus.Active;
+        public SessionStatus Status { get; set; } = SessionStatus.active;
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }
