@@ -53,19 +53,22 @@ namespace StudyHubApi.Services
                 table.IsOccupied = true;
                 table.CurrentUserId = userId;
                 table.UpdatedAt = DateTime.UtcNow;
-
+                //Update user credits
+                userCredits.Balance -= table.HourlyRate;
+                userCredits.UpdatedAt = DateTime.UtcNow;
+                userCredits.TotalSpent += table.HourlyRate;
                 // Create session
                 var session = new TableSession
                 {
                     UserId = userId,
                     TableId = request.TableId,
                     StartTime = DateTime.UtcNow,
-                    CreditsUsed = 0,
-                    Status = SessionStatus.active,
+                    CreditsUsed = table.HourlyRate,
+                    Status = "active",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
-
+                
                 _context.TableSessions.Add(session);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -92,7 +95,7 @@ namespace StudyHubApi.Services
                 if (session == null)
                     throw new InvalidOperationException("Session not found or unauthorized");
 
-                if (session.Status != SessionStatus.active)
+                if (session.Status != "active")
                     throw new InvalidOperationException("Session is not active");
 
                 var endTime = DateTime.UtcNow;
@@ -114,7 +117,7 @@ namespace StudyHubApi.Services
                 // Update session
                 session.EndTime = endTime;
                 session.CreditsUsed = creditsUsed;
-                session.Status = SessionStatus.completed;
+                session.Status = "completed";
                 session.UpdatedAt = DateTime.UtcNow;
 
                 // Free up table
@@ -142,7 +145,7 @@ namespace StudyHubApi.Services
         {
             var session = await _context.TableSessions
                 .Include(ts => ts.Table)
-                .FirstOrDefaultAsync(ts => ts.UserId == userId && ts.Status == SessionStatus.active);
+                .FirstOrDefaultAsync(ts => ts.UserId == userId && ts.Status == "active");
 
             return session != null ? MapToSessionWithTableDto(session) : null;
         }

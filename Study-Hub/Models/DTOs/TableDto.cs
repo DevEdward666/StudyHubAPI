@@ -35,7 +35,7 @@ namespace Study_Hub.Models.DTOs
         public DateTime StartTime { get; set; }
         public DateTime? EndTime { get; set; }
         public decimal CreditsUsed { get; set; }
-        public SessionStatus Status { get; set; }
+        public string Status { get; set; }
         public StudyTableDto Table { get; set; }
         public DateTime CreatedAt { get; set; }
     }

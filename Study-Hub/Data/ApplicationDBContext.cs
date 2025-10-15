@@ -36,9 +36,6 @@ namespace Study_Hub.Data
 
             modelBuilder.Entity<TableSession>()
                 .Property(e => e.Status)
-                .HasConversion(
-                    v => v.ToString(),                            // to database: "active"
-                    v => (SessionStatus)Enum.Parse(typeof(SessionStatus), v)) // from db
                 .HasColumnType("session_status");
 
             modelBuilder.Entity<AdminUser>()

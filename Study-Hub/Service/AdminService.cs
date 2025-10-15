@@ -22,21 +22,30 @@ namespace Study_Hub.Services
 
         public async Task<List<UserWithInfoDto>> GetAllUsersAsync()
         {
-            var users = await _context.Users
-             .Include(u => u.UserCredits)
-             .Include(u => u.TableSessions)
-             .ToListAsync();
-
-            return users.Select(user => new UserWithInfoDto
+            try
             {
-                Id = user.Id,
-                Email = user.Email,
-                Name = user.Name,
-                Credits = user.UserCredits?.Balance ?? 0,
-                IsAdmin = user.AdminUser != null,
-                HasActiveSession = user.TableSessions?.Any(ts => ts.Status == SessionStatus.active) ?? false, // Null check here
-                CreatedAt = user.CreatedAt
-            }).ToList();
+                var users = await _context.Users
+                    .Include(u => u.UserCredits)
+                    .Include(u => u.TableSessions)
+                    .ToListAsync();
+
+                return users.Select(user => new UserWithInfoDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    Name = user.Name,
+                    Credits = user.UserCredits?.Balance ?? 0,
+                    IsAdmin = user.AdminUser != null,
+                    HasActiveSession = user.TableSessions?.Any(ts => ts.Status == "active") ?? false, // Null check here
+                    CreatedAt = user.CreatedAt
+                }).ToList();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+          
         }
 
         public async Task<List<TransactionWithUserDto>> GetPendingTransactionsAsync()
