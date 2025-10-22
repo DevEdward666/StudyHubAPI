@@ -37,7 +37,7 @@ namespace Study_Hub.Models.Entities
 
         [Required]
         [Column("status")]
-    public string Status { get; set; } = "active";
+        public string Status { get; set; } = "active";
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }

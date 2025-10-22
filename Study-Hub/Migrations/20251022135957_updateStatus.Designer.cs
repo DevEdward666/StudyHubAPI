@@ -6,15 +6,14 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Study_Hub.Data;
-using Study_Hub.Models.Entities;
 
 #nullable disable
 
 namespace Study_Hub.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251015140826_FixSessionStatusEnum")]
-    partial class FixSessionStatusEnum
+    [Migration("20251022135957_updateStatus")]
+    partial class updateStatus
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -385,8 +384,9 @@ namespace Study_Hub.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("start_time");
 
-                    b.Property<SessionStatus>("Status")
-                        .HasColumnType("session_status")
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
                         .HasColumnName("status");
 
                     b.Property<Guid>("TableId")
@@ -404,8 +404,6 @@ namespace Study_Hub.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Status");
 
                     b.HasIndex("TableId");
 

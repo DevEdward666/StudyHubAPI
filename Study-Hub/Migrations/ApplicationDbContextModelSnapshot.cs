@@ -383,7 +383,7 @@ namespace Study_Hub.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("session_status")
+                        .HasColumnType("text")
                         .HasColumnName("status");
 
                     b.Property<Guid>("TableId")
@@ -401,8 +401,6 @@ namespace Study_Hub.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Status");
 
                     b.HasIndex("TableId");
 

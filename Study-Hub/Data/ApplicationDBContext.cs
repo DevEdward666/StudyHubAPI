@@ -34,9 +34,9 @@ namespace Study_Hub.Data
 
             modelBuilder.HasPostgresEnum<SessionStatus>("session_status");
 
-            modelBuilder.Entity<TableSession>()
-                .Property(e => e.Status)
-                .HasColumnType("session_status");
+            // modelBuilder.Entity<TableSession>()
+            //     .Property(e => e.Status)
+            //     .HasColumnType("session_status");
 
             modelBuilder.Entity<AdminUser>()
                 .Property(e => e.Role)
@@ -76,8 +76,8 @@ namespace Study_Hub.Data
             modelBuilder.Entity<CreditTransaction>()
                 .HasIndex(ct => ct.Status);
 
-            modelBuilder.Entity<TableSession>()
-                .HasIndex(ts => ts.Status);
+            // modelBuilder.Entity<TableSession>()
+            //     .HasIndex(ts => ts.Status);
 
             modelBuilder.Entity<PremiseActivation>()
                 .HasIndex(pa => pa.IsActive);

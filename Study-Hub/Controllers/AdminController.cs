@@ -9,7 +9,6 @@ namespace StudyHubApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;

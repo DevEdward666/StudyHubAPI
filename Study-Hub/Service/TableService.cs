@@ -63,7 +63,8 @@ namespace StudyHubApi.Services
                     UserId = userId,
                     TableId = request.TableId,
                     StartTime = DateTime.UtcNow,
-                    CreditsUsed = table.HourlyRate,
+                    EndTime = request.endTime,
+                    CreditsUsed = table.HourlyRate * request.hours,
                     Status = "active",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow

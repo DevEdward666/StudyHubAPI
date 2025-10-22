@@ -12,7 +12,7 @@ using Study_Hub.Data;
 namespace Study_Hub.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250922152739_InitialCreate")]
+    [Migration("20251022124231_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -23,6 +23,7 @@ namespace Study_Hub.Migrations
                 .HasAnnotation("ProductVersion", "9.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "session_status", new[] { "active", "completed" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "session_status", "session_status", new[] { "active", "completed" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
