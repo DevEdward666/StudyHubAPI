@@ -17,10 +17,40 @@ namespace StudyHubApi.Services
 
         public async Task<List<StudyTableDto>> GetAllTablesAsync()
         {
-            var tables = await _context.StudyTables.ToListAsync();
-            return tables.Select(MapToStudyTableDto).ToList();
+            var tables = await _context.StudyTables
+                .Include(t => t.TableSessions)
+                .ToListAsync();
+
+// Filter active sessions in memory
+            foreach (var table in tables)
+            {
+                table.TableSessions = table.TableSessions
+                    .Where(s => s.Status.ToLower().Trim() == "active" && s.TableId == table.Id)
+                    .ToList();
+            }
+
+            return tables.Select(MapToStudyTableDtoWithSession).ToList();
         }
 
+// Update or create this mapping method
+        private StudyTableDto MapToStudyTableDtoWithSession(StudyTable table)
+        {
+            var dto = MapToStudyTableDto(table); // Your existing mapping
+    
+            // Add active session data
+            var activeSession = table.TableSessions?.FirstOrDefault(s => s.Status.ToLower().Trim() == "active" && s.TableId == table.Id);
+            if (activeSession != null)
+            {
+                dto.CurrentSession = new CurrentSessionDto
+                {
+                    Id = activeSession.Id,
+                    StartTime = activeSession.StartTime,
+                    EndTime = activeSession.EndTime ?? DateTime.UtcNow // Use current time if EndTime is null
+                };
+            }
+    
+            return dto;
+        }
         public async Task<StudyTableDto?> GetTableByQRAsync(string qrCode)
         {
             var table = await _context.StudyTables
@@ -36,7 +66,7 @@ namespace StudyHubApi.Services
             {
                 // Verify QR code matches table
                 var table = await _context.StudyTables.FindAsync(request.TableId);
-                if (table == null || table.QrCode != request.QrCode)
+                if (table == null)
                     throw new InvalidOperationException("Invalid QR code for this table");
 
                 if (table.IsOccupied)

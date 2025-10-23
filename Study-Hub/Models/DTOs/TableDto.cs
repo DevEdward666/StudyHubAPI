@@ -16,6 +16,15 @@ namespace Study_Hub.Models.DTOs
         public string Location { get; set; }
         public int Capacity { get; set; }
         public DateTime CreatedAt { get; set; }
+        public CurrentSessionDto? CurrentSession { get; set; }
+    }
+
+// Add this new class
+    public class CurrentSessionDto
+    {
+        public Guid Id { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
     }
 
     public class StartSessionRequestDto
@@ -24,7 +33,7 @@ namespace Study_Hub.Models.DTOs
         public Guid TableId { get; set; }
 
         [Required]
-        public string QrCode { get; set; }
+        public string? QrCode { get; set; }
         [Required]
         public DateTime endTime { get; set; }
         [Required]
