@@ -72,16 +72,20 @@ namespace StudyHubApi.Services
                 if (table.IsOccupied)
                     throw new InvalidOperationException("Table is already occupied");
 
-                // Check user has credits
+                // Check user has credits - use provided userId or fall back to authenticated userId
+                var targetUserId = !string.IsNullOrEmpty(request.userId) && Guid.TryParse(request.userId, out var parsedUserId)
+                    ? parsedUserId
+                    : userId;
+                
                 var userCredits = await _context.UserCredit
-                    .FirstOrDefaultAsync(uc => uc.UserId == userId);
+                    .FirstOrDefaultAsync(uc => uc.UserId == targetUserId);
 
                 if (userCredits == null || userCredits.Balance < table.HourlyRate)
                     throw new InvalidOperationException("Insufficient credits");
 
                 // Mark table as occupied
                 table.IsOccupied = true;
-                table.CurrentUserId = userId;
+                table.CurrentUserId = targetUserId;
                 table.UpdatedAt = DateTime.UtcNow;
                 //Update user credits
                 userCredits.Balance -= table.HourlyRate;
@@ -90,7 +94,7 @@ namespace StudyHubApi.Services
                 // Create session
                 var session = new TableSession
                 {
-                    UserId = userId,
+                    UserId = targetUserId,
                     TableId = request.TableId,
                     StartTime = DateTime.UtcNow,
                     EndTime = request.endTime,

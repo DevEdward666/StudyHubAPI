@@ -59,6 +59,10 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPremiseService, PremiseService>();
+builder.Services.AddScoped<Study_Hub.Service.Interface.IPushNotificationService, Study_Hub.Service.PushNotificationService>();
+
+// Register PushServiceClient for Web Push
+builder.Services.AddHttpClient<Lib.Net.Http.WebPush.PushServiceClient>();
 
 // CORS Configuration
 builder.Services.AddCors(options =>

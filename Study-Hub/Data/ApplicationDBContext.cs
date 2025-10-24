@@ -22,6 +22,8 @@ namespace Study_Hub.Data
         public DbSet<AdminUser> AdminUsers { get; set; }
         public DbSet<PremiseActivation> PremiseActivations { get; set; }
         public DbSet<PremiseQrCode> PremiseQrCodes { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<PushSubscription> PushSubscriptions { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -32,7 +34,19 @@ namespace Study_Hub.Data
                 .Property(e => e.Status)
                 .HasConversion<string>();
 
-            modelBuilder.HasPostgresEnum<SessionStatus>("session_status");
+            // modelBuilder.HasPostgresEnum<SessionStatus>("session_status");
+
+            modelBuilder.Entity<Notification>()
+                .Property(e => e.Type)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Notification>()
+                .Property(e => e.Priority)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Notification>()
+                .Property(e => e.IsRead)
+                .HasDefaultValue(false);
 
             // modelBuilder.Entity<TableSession>()
             //     .Property(e => e.Status)
@@ -85,6 +99,36 @@ namespace Study_Hub.Data
             modelBuilder.Entity<PremiseActivation>()
                 .HasIndex(pa => pa.ExpiresAt);
 
+            // Notification indexes for performance
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => n.UserId);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => n.IsRead);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => n.Type);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => n.Priority);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => n.CreatedAt);
+
+            modelBuilder.Entity<Notification>()
+                .HasIndex(n => n.ExpiresAt);
+
+            // PushSubscription indexes for performance
+            modelBuilder.Entity<PushSubscription>()
+                .HasIndex(ps => ps.UserId);
+
+            modelBuilder.Entity<PushSubscription>()
+                .HasIndex(ps => ps.Endpoint)
+                .IsUnique();
+
+            modelBuilder.Entity<PushSubscription>()
+                .HasIndex(ps => ps.IsActive);
+
             // Configure relationships
             modelBuilder.Entity<StudyTable>()
                 .HasOne(st => st.CurrentUser)
@@ -116,7 +160,7 @@ namespace Study_Hub.Data
             {
                 typeof(AuthAccount), typeof(StudyTable), typeof(UserCredit),
                 typeof(CreditTransaction), typeof(TableSession), typeof(AdminUser),
-                typeof(PremiseActivation), typeof(PremiseQrCode)
+                typeof(PremiseActivation), typeof(PremiseQrCode), typeof(Notification)
             };
 
             foreach (var entityType in entityTypes)

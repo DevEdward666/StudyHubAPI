@@ -35,6 +35,8 @@ namespace Study_Hub.Models.DTOs
         [Required]
         public string? QrCode { get; set; }
         [Required]
+        public string? userId { get; set; }
+        [Required]
         public DateTime endTime { get; set; }
         [Required]
         public int hours { get; set; }

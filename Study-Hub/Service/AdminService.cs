@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿using Microsoft.EntityFrameworkCore;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
@@ -227,6 +227,77 @@ namespace Study_Hub.Services
                 _context.AdminUsers.Add(adminUser);
                 await _context.SaveChangesAsync();
                 return new ToggleUserAdminResponseDto { IsAdmin = true };
+            }
+        }
+
+        public async Task<AdminAddCreditsResponseDto> AddApprovedCreditsAsync(Guid adminUserId, AdminAddCreditsRequestDto request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Verify user exists
+                var user = await _context.Users.FindAsync(request.UserId);
+                if (user == null)
+                    throw new InvalidOperationException("User not found");
+
+                // Create a pre-approved transaction
+                var creditTransaction = new CreditTransaction
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = request.UserId,
+                    Amount = request.Amount,
+                    Cost = request.Amount, // Admin added credits have no cost markup
+                    Status = TransactionStatus.Approved,
+                    PaymentMethod = "Admin Credit",
+                    TransactionId = $"ADMIN_{DateTime.UtcNow:yyyyMMddHHmmss}_{Guid.NewGuid().ToString().Substring(0, 8)}",
+                    ApprovedBy = adminUserId,
+                    ApprovedAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.CreditTransactions.Add(creditTransaction);
+
+                // Add credits to user's balance immediately
+                var userCredits = await _context.UserCredit
+                    .FirstOrDefaultAsync(uc => uc.UserId == request.UserId);
+
+                if (userCredits == null)
+                {
+                    userCredits = new UserCredit
+                    {
+                        UserId = request.UserId,
+                        Balance = request.Amount,
+                        TotalPurchased = request.Amount,
+                        TotalSpent = 0,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.UserCredit.Add(userCredits);
+                }
+                else
+                {
+                    userCredits.Balance += request.Amount;
+                    userCredits.TotalPurchased += request.Amount;
+                    userCredits.UpdatedAt = DateTime.UtcNow;
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new AdminAddCreditsResponseDto
+                {
+                    TransactionId = creditTransaction.Id,
+                    Amount = request.Amount,
+                    Status = TransactionStatus.Approved,
+                    CreatedAt = creditTransaction.CreatedAt,
+                    NewBalance = userCredits.Balance
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
         }
 

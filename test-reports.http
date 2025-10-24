@@ -1,0 +1,305 @@
+### Transaction Reports Testing
+### Use with REST Client extension in VS Code or import into Postman
+
+@baseUrl = http://localhost:5000/api
+@adminToken = YOUR_ADMIN_JWT_TOKEN_HERE
+
+### ============================================
+### 1. Get Today's Daily Report
+### ============================================
+GET {{baseUrl}}/report/transactions/daily
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ============================================
+### 2. Get Daily Report for Specific Date
+### ============================================
+GET {{baseUrl}}/report/transactions/daily?date=2025-10-20
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ============================================
+### 3. Get This Week's Report
+### ============================================
+GET {{baseUrl}}/report/transactions/weekly
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ============================================
+### 4. Get Weekly Report for Specific Week
+### ============================================
+GET {{baseUrl}}/report/transactions/weekly?weekStartDate=2025-10-14
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ============================================
+### 5. Get This Month's Report
+### ============================================
+GET {{baseUrl}}/report/transactions/monthly
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ============================================
+### 6. Get Monthly Report for Specific Month
+### ============================================
+GET {{baseUrl}}/report/transactions/monthly?year=2025&month=9
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ============================================
+### 7. Get Custom Period Report (Daily)
+### ============================================
+POST {{baseUrl}}/report/transactions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "period": "Daily",
+  "startDate": "2025-10-25T00:00:00Z"
+}
+
+###
+
+### ============================================
+### 8. Get Custom Period Report (Weekly)
+### ============================================
+POST {{baseUrl}}/report/transactions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "period": "Weekly",
+  "startDate": "2025-10-21T00:00:00Z"
+}
+
+###
+
+### ============================================
+### 9. Get Custom Period Report (Monthly)
+### ============================================
+POST {{baseUrl}}/report/transactions
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "period": "Monthly",
+  "startDate": "2025-10-01T00:00:00Z",
+  "endDate": "2025-10-31T23:59:59Z"
+}
+
+###
+
+### ============================================
+### 10. Export Daily Report as CSV
+### ============================================
+POST {{baseUrl}}/report/transactions/export
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "period": "Daily",
+  "startDate": "2025-10-25T00:00:00Z",
+  "format": "csv"
+}
+
+###
+
+### ============================================
+### 11. Export Weekly Report as CSV
+### ============================================
+POST {{baseUrl}}/report/transactions/export
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "period": "Weekly",
+  "startDate": "2025-10-21T00:00:00Z",
+  "format": "csv"
+}
+
+###
+
+### ============================================
+### 12. Export Monthly Report as CSV
+### ============================================
+POST {{baseUrl}}/report/transactions/export
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "period": "Monthly",
+  "startDate": "2025-10-01T00:00:00Z",
+  "endDate": "2025-10-31T23:59:59Z",
+  "format": "csv"
+}
+
+###
+
+### ============================================
+### 13. Export Monthly Report as JSON
+### ============================================
+POST {{baseUrl}}/report/transactions/export
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "period": "Monthly",
+  "startDate": "2025-10-01T00:00:00Z",
+  "endDate": "2025-10-31T23:59:59Z",
+  "format": "json"
+}
+
+###
+
+### ============================================
+### 14. Get Quick Stats for Dashboard
+### ============================================
+GET {{baseUrl}}/report/transactions/quick-stats
+Authorization: Bearer {{adminToken}}
+
+###
+
+### ============================================
+### 15. Test Without Authorization (Should Fail)
+### ============================================
+GET {{baseUrl}}/report/transactions/daily
+
+### Expected Response: 401 Unauthorized
+
+###
+
+##############################################
+# cURL Examples
+##############################################
+
+### Get Daily Report
+# curl -X GET "http://localhost:5000/api/report/transactions/daily" \
+#   -H "Authorization: Bearer YOUR_TOKEN" | jq '.'
+
+### Get Weekly Report
+# curl -X GET "http://localhost:5000/api/report/transactions/weekly" \
+#   -H "Authorization: Bearer YOUR_TOKEN" | jq '.'
+
+### Get Monthly Report
+# curl -X GET "http://localhost:5000/api/report/transactions/monthly?year=2025&month=10" \
+#   -H "Authorization: Bearer YOUR_TOKEN" | jq '.'
+
+### Export as CSV
+# curl -X POST "http://localhost:5000/api/report/transactions/export" \
+#   -H "Authorization: Bearer YOUR_TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d '{
+#     "period": "Monthly",
+#     "startDate": "2025-10-01T00:00:00Z",
+#     "endDate": "2025-10-31T23:59:59Z",
+#     "format": "csv"
+#   }' \
+#   --output monthly_report.csv
+
+### Get Quick Stats
+# curl -X GET "http://localhost:5000/api/report/transactions/quick-stats" \
+#   -H "Authorization: Bearer YOUR_TOKEN" | jq '.'
+
+##############################################
+# PowerShell Examples
+##############################################
+
+### Get Daily Report (PowerShell)
+# $headers = @{
+#     "Authorization" = "Bearer YOUR_TOKEN"
+# }
+# Invoke-RestMethod -Uri "http://localhost:5000/api/report/transactions/daily" -Headers $headers
+
+### Export Monthly Report (PowerShell)
+# $body = @{
+#     period = "Monthly"
+#     startDate = "2025-10-01T00:00:00Z"
+#     endDate = "2025-10-31T23:59:59Z"
+#     format = "csv"
+# } | ConvertTo-Json
+# 
+# Invoke-RestMethod -Uri "http://localhost:5000/api/report/transactions/export" `
+#     -Method Post `
+#     -Headers $headers `
+#     -ContentType "application/json" `
+#     -Body $body `
+#     -OutFile "report.csv"
+
+##############################################
+# Expected Response Formats
+##############################################
+
+### Daily Report Response Structure:
+# {
+#   "success": true,
+#   "message": "Daily report generated successfully",
+#   "data": {
+#     "report": {
+#       "period": "Daily",
+#       "startDate": "2025-10-25T00:00:00Z",
+#       "endDate": "2025-10-25T23:59:59.999Z",
+#       "summary": { ... },
+#       "byStatus": [ ... ],
+#       "byPaymentMethod": [ ... ],
+#       "dailyBreakdown": [ ... ],
+#       "topUsers": [ ... ]
+#     },
+#     "generatedAt": "2025-10-25T10:30:00Z"
+#   }
+# }
+
+### Quick Stats Response Structure:
+# {
+#   "success": true,
+#   "message": "Quick stats retrieved successfully",
+#   "data": {
+#     "today": {
+#       "transactions": 45,
+#       "amount": 4500.00,
+#       "approved": 40,
+#       "pending": 3
+#     },
+#     "thisWeek": { ... },
+#     "thisMonth": { ... }
+#   }
+# }
+
+##############################################
+# Testing Checklist
+##############################################
+
+# ✓ 1. Test daily report with current date
+# ✓ 2. Test daily report with specific past date
+# ✓ 3. Test weekly report with current week
+# ✓ 4. Test weekly report with specific week
+# ✓ 5. Test monthly report with current month
+# ✓ 6. Test monthly report with specific month
+# ✓ 7. Test custom period reports
+# ✓ 8. Test CSV export for all periods
+# ✓ 9. Test JSON export for all periods
+# ✓ 10. Test quick stats endpoint
+# ✓ 11. Verify unauthorized access is blocked
+# ✓ 12. Verify non-admin users cannot access
+# ✓ 13. Check report accuracy against database
+# ✓ 14. Test with empty date ranges
+# ✓ 15. Test with large date ranges (performance)
+
+##############################################
+# Notes
+##############################################
+
+# 1. All endpoints require admin authentication
+# 2. Dates should be in ISO 8601 format (UTC)
+# 3. Weekly reports start from Monday
+# 4. Monthly reports include full month
+# 5. Top users limited to 10
+# 6. CSV exports are ready for Excel/Google Sheets
+# 7. Quick stats provides dashboard overview
+# 8. Reports generated in real-time (no caching yet)
+

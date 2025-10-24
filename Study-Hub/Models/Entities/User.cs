@@ -49,5 +49,6 @@ namespace Study_Hub.Models.Entities
         public virtual ICollection<CreditTransaction> CreditTransactions { get; set; } = new List<CreditTransaction>();
         public virtual ICollection<TableSession> TableSessions { get; set; } = new List<TableSession>();
         public virtual ICollection<PremiseActivation> PremiseActivations { get; set; } = new List<PremiseActivation>();
+        public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 }

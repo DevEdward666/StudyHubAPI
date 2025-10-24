@@ -1,0 +1,169 @@
+### Admin Add Credits Endpoint Testing
+### Use this file with REST Client extension in VS Code or import into Postman
+
+@baseUrl = http://localhost:5000/api
+@adminToken = YOUR_ADMIN_JWT_TOKEN_HERE
+@userId = USER_GUID_HERE
+
+### 1. Add Credits Successfully
+POST {{baseUrl}}/admin/credits/add-approved
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "amount": 100.00,
+  "notes": "Promotional credits for new user"
+}
+
+### Expected Response 200 OK:
+# {
+#   "success": true,
+#   "message": "Credits added successfully",
+#   "data": {
+#     "transactionId": "123e4567-e89b-12d3-a456-426614174000",
+#     "amount": 100.00,
+#     "status": "Approved",
+#     "createdAt": "2025-10-24T10:30:00Z",
+#     "newBalance": 150.00
+#   }
+# }
+
+###
+
+### 2. Add Credits with Different Amount
+POST {{baseUrl}}/admin/credits/add-approved
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "amount": 50.50,
+  "notes": "Bonus credits"
+}
+
+###
+
+### 3. Test Validation - Negative Amount (Should Fail)
+POST {{baseUrl}}/admin/credits/add-approved
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "amount": -10.00
+}
+
+### Expected Response 400 Bad Request
+
+###
+
+### 4. Test Validation - Zero Amount (Should Fail)
+POST {{baseUrl}}/admin/credits/add-approved
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "amount": 0
+}
+
+### Expected Response 400 Bad Request
+
+###
+
+### 5. Test with Invalid User ID (Should Fail)
+POST {{baseUrl}}/admin/credits/add-approved
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "userId": "00000000-0000-0000-0000-000000000000",
+  "amount": 100.00
+}
+
+### Expected Response 400 Bad Request with message "User not found"
+
+###
+
+### 6. Test Without Authorization (Should Fail)
+POST {{baseUrl}}/admin/credits/add-approved
+Content-Type: application/json
+
+{
+  "userId": "{{userId}}",
+  "amount": 100.00
+}
+
+### Expected Response 401 Unauthorized
+
+###
+
+### 7. Get User to Verify Credits (if you have this endpoint)
+GET {{baseUrl}}/user/credits
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 8. Get All Users (Admin Only) - To see updated balance
+GET {{baseUrl}}/admin/users
+Authorization: Bearer {{adminToken}}
+
+###
+
+### 9. Get Pending Transactions (to verify admin credits show as approved)
+GET {{baseUrl}}/admin/transactions/pending
+Authorization: Bearer {{adminToken}}
+
+###
+
+##############################################
+# cURL Examples (for terminal testing)
+##############################################
+
+### Example 1: Add credits using cURL
+# curl -X POST "http://localhost:5000/api/admin/credits/add-approved" \
+#   -H "Authorization: Bearer YOUR_TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d '{"userId":"USER_GUID","amount":100.00,"notes":"Test credits"}'
+
+### Example 2: Add credits with jq for pretty output
+# curl -X POST "http://localhost:5000/api/admin/credits/add-approved" \
+#   -H "Authorization: Bearer YOUR_TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d '{"userId":"USER_GUID","amount":100.00}' | jq '.'
+
+### Example 3: Add credits and save response
+# curl -X POST "http://localhost:5000/api/admin/credits/add-approved" \
+#   -H "Authorization: Bearer YOUR_TOKEN" \
+#   -H "Content-Type: application/json" \
+#   -d '{"userId":"USER_GUID","amount":100.00}' \
+#   -o response.json
+
+##############################################
+# Notes for Testing
+##############################################
+
+# 1. Get Admin Token:
+#    - First login as admin user via /api/auth/signin
+#    - Copy the token from the response
+#
+# 2. Get User ID:
+#    - Use /api/admin/users to get list of users
+#    - Copy the ID of the user you want to add credits to
+#
+# 3. Verify Results:
+#    - Check the user's credit balance increased
+#    - Verify transaction appears in transaction history
+#    - Confirm transaction status is "Approved"
+#    - Check transaction has "Admin Credit" as payment method
+#    - Verify approvedBy field contains admin's user ID
+#
+# 4. Database Verification:
+#    SELECT * FROM credit_transactions 
+#    WHERE transaction_id LIKE 'ADMIN_%' 
+#    ORDER BY created_at DESC;
+#
+#    SELECT * FROM user_credit 
+#    WHERE user_id = 'YOUR_USER_GUID';
+

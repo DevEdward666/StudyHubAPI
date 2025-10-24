@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Study_Hub.Data;
+using Study_Hub.Service;
+using Study_Hub.Service.Background;
+using Study_Hub.Service.Interface;
 using Study_Hub.Services;
 using Study_Hub.Services.Interfaces;
 using StudyHubApi.Services;
@@ -52,6 +55,8 @@ namespace StudyHubApi.Extensions
             services.AddScoped<ITableService, TableService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IPremiseService, PremiseService>();
+            services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IReportService, ReportService>();
         }
 
         public static void ConfigureSwagger(this IServiceCollection services)

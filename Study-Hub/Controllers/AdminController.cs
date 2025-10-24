@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Services.Interfaces;
@@ -160,6 +160,25 @@ namespace StudyHubApi.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ApiResponse<SelectedTableResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("credits/add-approved")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<AdminAddCreditsResponseDto>>> AddApprovedCredits([FromBody] AdminAddCreditsRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _adminService.AddApprovedCreditsAsync(userId, request);
+                return Ok(ApiResponse<AdminAddCreditsResponseDto>.SuccessResponse(result, "Credits added successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<AdminAddCreditsResponseDto>.ErrorResponse(ex.Message));
             }
         }
 

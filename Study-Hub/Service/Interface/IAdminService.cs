@@ -1,4 +1,4 @@
-﻿using Study_Hub.Models.DTOs;
+﻿﻿using Study_Hub.Models.DTOs;
 
 namespace Study_Hub.Services.Interfaces
 {
@@ -14,6 +14,7 @@ namespace Study_Hub.Services.Interfaces
         Task<SelectedTableResponseDto> SelectedStudyTableAsync(SelectedTableRequestDto request);
         Task<bool> MakeUserAdminAsync(string userEmail);
         Task<ToggleUserAdminResponseDto> ToggleUserAdminAsync(Guid userId);
+        Task<AdminAddCreditsResponseDto> AddApprovedCreditsAsync(Guid adminUserId, AdminAddCreditsRequestDto request);
         Task<QRGenerationResponseDto> GenerateTableQRAsync(Guid tableId);
         Task<string> SetupDataAsync();
     }

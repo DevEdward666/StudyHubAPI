@@ -1,4 +1,4 @@
-﻿using Study_Hub.Models.DTOs;
+﻿﻿using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 
@@ -95,6 +95,27 @@ namespace Study_Hub.Models.DTOs
         [Required]
         [EmailAddress]
         public string UserEmail { get; set; }
+    }
+
+    public class AdminAddCreditsRequestDto
+    {
+        [Required]
+        public Guid UserId { get; set; }
+
+        [Required]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Amount must be positive")]
+        public decimal Amount { get; set; }
+
+        public string? Notes { get; set; }
+    }
+
+    public class AdminAddCreditsResponseDto
+    {
+        public Guid TransactionId { get; set; }
+        public decimal Amount { get; set; }
+        public TransactionStatus Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public decimal NewBalance { get; set; }
     }
 
     public class ToggleUserAdminRequestDto
