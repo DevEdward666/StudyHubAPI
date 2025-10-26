@@ -123,9 +123,10 @@ namespace StudyHubApi.Services
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
+                
                 var session = await _context.TableSessions
                     .Include(ts => ts.Table)
-                    .FirstOrDefaultAsync(ts => ts.Id == sessionId && ts.UserId == userId);
+                    .FirstOrDefaultAsync(ts => ts.Id == sessionId);
 
                 if (session == null)
                     throw new InvalidOperationException("Session not found or unauthorized");

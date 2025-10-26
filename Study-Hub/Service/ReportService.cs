@@ -5,7 +5,7 @@ using Study_Hub.Models.Entities;
 using Study_Hub.Services.Interfaces;
 using System.Text;
 
-namespace Study_Hub.Services
+namespace Study_Hub.Service
 {
     public class ReportService : IReportService
     {
@@ -18,18 +18,23 @@ namespace Study_Hub.Services
 
         public async Task<TransactionReportDto> GetTransactionReportAsync(ReportPeriod period, DateTime? startDate = null, DateTime? endDate = null)
         {
+            // Ensure dates are UTC if provided
+            var utcStartDate = startDate.HasValue ? DateTime.SpecifyKind(startDate.Value, DateTimeKind.Utc) : (DateTime?)null;
+            
             return period switch
             {
-                ReportPeriod.Daily => await GetDailyReportAsync(startDate),
-                ReportPeriod.Weekly => await GetWeeklyReportAsync(startDate),
-                ReportPeriod.Monthly => await GetMonthlyReportAsync(startDate?.Year, startDate?.Month),
+                ReportPeriod.Daily => await GetDailyReportAsync(utcStartDate),
+                ReportPeriod.Weekly => await GetWeeklyReportAsync(utcStartDate),
+                ReportPeriod.Monthly => await GetMonthlyReportAsync(utcStartDate?.Year, utcStartDate?.Month),
                 _ => throw new ArgumentException("Invalid report period")
             };
         }
 
         public async Task<TransactionReportDto> GetDailyReportAsync(DateTime? date = null)
         {
-            var targetDate = date?.Date ?? DateTime.UtcNow.Date;
+            var targetDate = date.HasValue 
+                ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc) 
+                : DateTime.UtcNow.Date;
             var startDate = targetDate;
             var endDate = targetDate.AddDays(1).AddTicks(-1);
 
@@ -38,7 +43,9 @@ namespace Study_Hub.Services
 
         public async Task<TransactionReportDto> GetWeeklyReportAsync(DateTime? weekStartDate = null)
         {
-            var targetDate = weekStartDate?.Date ?? DateTime.UtcNow.Date;
+            var targetDate = weekStartDate.HasValue 
+                ? DateTime.SpecifyKind(weekStartDate.Value.Date, DateTimeKind.Utc) 
+                : DateTime.UtcNow.Date;
             
             // Get the start of the week (Monday)
             var dayOfWeek = (int)targetDate.DayOfWeek;
@@ -53,7 +60,7 @@ namespace Study_Hub.Services
             var targetYear = year ?? DateTime.UtcNow.Year;
             var targetMonth = month ?? DateTime.UtcNow.Month;
             
-            var startDate = new DateTime(targetYear, targetMonth, 1);
+            var startDate = DateTime.SpecifyKind(new DateTime(targetYear, targetMonth, 1), DateTimeKind.Utc);
             var endDate = startDate.AddMonths(1).AddTicks(-1);
 
             return await GenerateReportAsync(ReportPeriod.Monthly, startDate, endDate);

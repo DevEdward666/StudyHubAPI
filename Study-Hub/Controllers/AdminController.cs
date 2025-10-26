@@ -68,6 +68,23 @@ namespace StudyHubApi.Controllers
                 return BadRequest(ApiResponse<List<TransactionWithUserDto>>.ErrorResponse(ex.Message));
             }
         }
+        [HttpGet("transactions/all")]
+        public async Task<ActionResult<ApiResponse<List<TransactionWithUserDto>>>> GetAllTransactions()
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var transactions = await _adminService.GetPendingTransactionsAsync();
+                return Ok(ApiResponse<List<TransactionWithUserDto>>.SuccessResponse(transactions));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<TransactionWithUserDto>>.ErrorResponse(ex.Message));
+            }
+        }
 
         [HttpPost("transactions/approve")]
         public async Task<ActionResult<ApiResponse<bool>>> ApproveTransaction([FromBody] ApproveTransactionRequestDto request)

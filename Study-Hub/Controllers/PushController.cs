@@ -27,17 +27,24 @@ namespace Study_Hub.Controllers
         /// </summary>
         [HttpGet("vapid-public-key")]
         [AllowAnonymous]
-        public ActionResult<VapidPublicKeyDto> GetVapidPublicKey()
+        public ActionResult<ApiResponse<VapidPublicKeyDto>> GetVapidPublicKey()
         {
             try
             {
                 var publicKey = _pushService.GetVapidPublicKey();
-                return Ok(new VapidPublicKeyDto { PublicKey = publicKey });
+
+                if (string.IsNullOrWhiteSpace(publicKey))
+                {
+                    return NotFound(ApiResponse<VapidPublicKeyDto>.ErrorResponse("VAPID public key not configured."));
+                }
+
+                var payload = new VapidPublicKeyDto { PublicKey = publicKey };
+                return Ok(ApiResponse<VapidPublicKeyDto>.SuccessResponse(payload, "VAPID public key retrieved successfully."));
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error getting VAPID public key");
-                return StatusCode(500, new { message = "Error getting VAPID public key" });
+                return StatusCode(500, ApiResponse<VapidPublicKeyDto>.ErrorResponse("Error getting VAPID public key"));
             }
         }
 
@@ -203,8 +210,7 @@ namespace Study_Hub.Controllers
     // Additional DTO for sending to multiple users
     public class SendPushToUsersDto
     {
-        public List<Guid> UserIds { get; set; }
-        public PushNotificationDto Notification { get; set; }
+        public List<Guid> UserIds { get; set; } = new List<Guid>();
+        public PushNotificationDto Notification { get; set; } = new PushNotificationDto();
     }
 }
-

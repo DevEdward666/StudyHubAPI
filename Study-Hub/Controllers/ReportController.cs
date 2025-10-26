@@ -28,6 +28,15 @@ namespace Study_Hub.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    var errors = ModelState.Values
+                        .SelectMany(v => v.Errors)
+                        .Select(e => e.ErrorMessage)
+                        .ToList();
+                    return BadRequest(ApiResponse<TransactionReportResponseDto>.ErrorResponse("Validation failed", errors));
+                }
+
                 var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
                 if (!await _adminService.IsAdminAsync(userId))
                     return Forbid();
@@ -169,7 +178,6 @@ namespace Study_Hub.Controllers
                         request.EndDate
                     );
 
-                    var fileName = $"transaction_report_{request.Period}_{DateTime.UtcNow:yyyyMMddHHmmss}.json";
                     return new JsonResult(report)
                     {
                         ContentType = "application/json",
@@ -237,4 +245,3 @@ namespace Study_Hub.Controllers
         }
     }
 }
-

@@ -1,4 +1,3 @@
-
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -11,6 +10,7 @@ using StudyHubApi.Services.Interfaces;
 using System.Text;
 using System.Text.Json.Serialization;
 using Study_Hub.Models.Entities;
+using Study_Hub.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,7 +31,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 // JWT Authentication Configuration
 var jwtSettings = builder.Configuration.GetSection("JWT");
-var secretKey = jwtSettings["Secret"];
+string secretKey = jwtSettings["Secret"] ?? throw new InvalidOperationException("JWT secret is not configured. Please set JWT:Secret in configuration.");
 var key = Encoding.ASCII.GetBytes(secretKey);
 
 builder.Services.AddAuthentication(x =>
@@ -60,6 +60,8 @@ builder.Services.AddScoped<ITableService, TableService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPremiseService, PremiseService>();
 builder.Services.AddScoped<Study_Hub.Service.Interface.IPushNotificationService, Study_Hub.Service.PushNotificationService>();
+// Report service registration
+builder.Services.AddScoped<IReportService, Study_Hub.Service.ReportService>();
 
 // Register PushServiceClient for Web Push
 builder.Services.AddHttpClient<Lib.Net.Http.WebPush.PushServiceClient>();
@@ -119,6 +121,9 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
+
+// Use Exception Handling Middleware
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())

@@ -58,6 +58,16 @@ namespace Study_Hub.Services
 
             return transactions.Select(MapToTransactionWithUserDto).ToList();
         }
+        
+        public async Task<List<TransactionWithUserDto>> GetAllTransactionsAsync()
+        {
+            var transactions = await _context.CreditTransactions
+                .Include(ct => ct.User)
+                .OrderByDescending(ct => ct.CreatedAt)
+                .ToListAsync();
+
+            return transactions.Select(MapToTransactionWithUserDto).ToList();
+        }
 
         public async Task<bool> ApproveTransactionAsync(Guid transactionId, Guid adminUserId)
         {

@@ -1,4 +1,5 @@
 using Study_Hub.Models.Entities;
+using System.ComponentModel.DataAnnotations;
 
 namespace Study_Hub.Models.DTOs
 {
@@ -75,6 +76,7 @@ namespace Study_Hub.Models.DTOs
 
     public class GetReportRequestDto
     {
+        [Required]
         public ReportPeriod Period { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
@@ -82,16 +84,20 @@ namespace Study_Hub.Models.DTOs
 
     public class TransactionReportResponseDto
     {
+        [Required]
         public TransactionReportDto Report { get; set; }
+        [Required]
         public DateTime GeneratedAt { get; set; }
     }
 
     public class ExportReportRequestDto
     {
+        [Required]
         public ReportPeriod Period { get; set; }
         public DateTime? StartDate { get; set; }
         public DateTime? EndDate { get; set; }
+        [Required]
+        [RegularExpression("^(json|csv)$", ErrorMessage = "Format must be 'json' or 'csv'")]
         public string Format { get; set; } = "json"; // json, csv
     }
 }
-

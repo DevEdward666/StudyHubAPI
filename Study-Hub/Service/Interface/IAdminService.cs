@@ -6,7 +6,9 @@ namespace Study_Hub.Services.Interfaces
     {
         Task<bool> IsAdminAsync(Guid userId);
         Task<List<UserWithInfoDto>> GetAllUsersAsync();
+
         Task<List<TransactionWithUserDto>> GetPendingTransactionsAsync();
+        Task<List<TransactionWithUserDto>> GetAllTransactionsAsync();
         Task<bool> ApproveTransactionAsync(Guid transactionId, Guid adminUserId);
         Task<bool> RejectTransactionAsync(Guid transactionId, Guid adminUserId);
         Task<CreateTableResponseDto> CreateStudyTableAsync(CreateTableRequestDto request);

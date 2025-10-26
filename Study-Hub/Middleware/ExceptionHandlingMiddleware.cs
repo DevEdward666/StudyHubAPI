@@ -1,8 +1,8 @@
-﻿using Study_Hub.Models.DTOs;
+﻿﻿using Study_Hub.Models.DTOs;
 using System.Net;
 using System.Text.Json;
 
-namespace StudyHubApi.Middleware
+namespace Study_Hub.Middleware
 {
     public class ExceptionHandlingMiddleware
     {
@@ -32,13 +32,18 @@ namespace StudyHubApi.Middleware
         {
             context.Response.ContentType = "application/json";
 
-            var response = new ApiResponse();
+            ApiResponse response;
 
             switch (exception)
             {
                 case UnauthorizedAccessException:
                     context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
                     response = ApiResponse.ErrorResponse("Unauthorized access");
+                    break;
+                case JsonException jsonEx:
+                    context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    response = ApiResponse.ErrorResponse("Invalid JSON format. Please check your request body.", 
+                        new List<string> { jsonEx.Message });
                     break;
                 case InvalidOperationException:
                     context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
