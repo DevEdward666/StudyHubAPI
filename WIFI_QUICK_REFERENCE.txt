@@ -1,0 +1,157 @@
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃                                                                  ┃
+┃  📶 WiFi CAPTIVE PORTAL - Quick Reference Card                   ┃
+┃                                                                  ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+
+🚀 START THE SYSTEM
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Terminal:
+  cd /Users/edward/Documents/StudyHubAPI/Study-Hub
+  dotnet run
+
+Frontend (React App):
+  cd /Users/edward/Documents/StudyHubAPI/study_hub_app
+  npm run dev
+  Navigate to: http://localhost:5173/app/admin/wifi
+
+
+🔌 API ENDPOINTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Base URL: http://localhost:5143/api
+
+Generate Password:
+  POST /wifi/request
+  Body: {"validMinutes": 60, "passwordLength": 8}
+
+Validate Password:
+  GET /wifi/validate?password=YOUR_PASSWORD
+
+Redeem Password:
+  POST /wifi/redeem?password=YOUR_PASSWORD
+
+Router Whitelist:
+  POST /router/whitelist
+  Body: {"macAddress": "00:11:22:33:44:55", "ttlSeconds": 3600}
+
+
+📱 USAGE EXAMPLES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Generate password via curl:
+  curl -X POST http://localhost:5143/api/wifi/request \
+    -H "Content-Type: application/json" \
+    -d '{"validMinutes": 60, "passwordLength": 8}'
+
+Validate password:
+  curl http://localhost:5143/api/wifi/validate?password=Abc3Xy9Z
+
+Run automated tests:
+  ./test-wifi-system.sh
+
+
+📚 DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Quick Start:         QUICK_START_WIFI.md
+Complete Setup:      WIFI_SETUP_GUIDE.md
+Architecture:        WIFI_ARCHITECTURE.md
+Full Reference:      WIFI_SYSTEM_COMPLETE.md
+Implementation:      WIFI_CHECKLIST.md
+Main README:         WIFI_README.md
+
+
+⚙️ CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Router Settings (Study-Hub/appsettings.json):
+  "Router": {
+    "Host": "192.168.1.1",
+    "Port": 22,
+    "Username": "admin",
+    "Password": "your_password"
+  }
+
+📡 YOUR ROUTER: TP-Link ER7206 (Professional Multi-WAN Router)
+
+GOOD NEWS! The TP-Link ER7206 supports:
+✅ Omada SDN Controller integration
+✅ Professional captive portal (with Omada AP)
+✅ TRUE auto-disconnect capability
+✅ Time-based access control
+✅ Guest network isolation
+
+NEXT STEPS:
+  → Deploy enhanced portal now (FREE, works today)
+  → Add Omada Access Point + Controller later ($50-80)
+  → Get TRUE 100% auto-disconnect!
+  → See: TPLINK_ER7206_OMADA_GUIDE.md
+
+Frontend Location:
+  study_hub_app/src/pages/WiFiPortal.tsx
+  Accessible at: /app/admin/wifi (Admin only)
+  
+Public Portal:
+  study_hub_app/src/pages/PublicWiFiPortalEnhanced.tsx
+  Accessible at: /wifi (Public access with countdown timer)
+
+
+🎯 FEATURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✓ Generate random WiFi passwords
+✓ Set expiration (30min - 12hrs)
+✓ Validate passwords in real-time
+✓ One-time use redemption
+✓ Auto-cleanup of expired passwords
+✓ Router MAC whitelisting (optional)
+✓ Beautiful web portal
+✓ Mobile responsive
+
+
+🆘 TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Backend won't start:
+  → dotnet ef database update
+  → Check port 5143
+
+Portal can't connect:
+  → Verify backend is running
+  → Check browser console
+  → Verify API_BASE URL
+
+No passwords expiring:
+  → Check cleanup service logs
+  → Verify UTC timestamps
+
+
+📊 SYSTEM STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Backend:              ✅ Complete
+Frontend:             ✅ Complete
+Database:             ✅ Migrated
+Documentation:        ✅ Complete
+Testing:              ✅ Verified
+Production Ready:     ✅ Yes
+
+
+🎊 QUICK TEST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Backend: cd Study-Hub && dotnet run
+2. Frontend: cd study_hub_app && npm run dev
+3. Navigate to: http://localhost:5173/app/admin/wifi
+4. Login as admin
+5. Click "Get WiFi Password"
+6. Copy the password
+7. Done! ✅
+
+
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃  Status: ✅ COMPLETE | Date: Oct 27, 2025 | Version: 1.0       ┃
+┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛
+

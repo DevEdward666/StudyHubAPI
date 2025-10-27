@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿using Microsoft.EntityFrameworkCore;
 using Study_Hub.Models.Entities;
 using System.Text.Json;
 
@@ -128,6 +128,26 @@ namespace Study_Hub.Data
 
             modelBuilder.Entity<PushSubscription>()
                 .HasIndex(ps => ps.IsActive);
+
+            // WifiAccess indexes
+            modelBuilder.Entity<WifiAccess>()
+                .HasIndex(w => w.Password)
+                .IsUnique();
+
+            modelBuilder.Entity<WifiAccess>()
+                .HasIndex(w => w.ExpiresAtUtc);
+
+            modelBuilder.Entity<WifiAccess>()
+                .HasIndex(w => w.Redeemed);
+
+            // WifiAccess configuration
+            modelBuilder.Entity<WifiAccess>(b =>
+            {
+                b.Property(x => x.Password).IsRequired().HasMaxLength(64);
+                b.Property(x => x.Note).HasMaxLength(200);
+                b.Property(x => x.CreatedAtUtc).HasColumnType("timestamp with time zone");
+                b.Property(x => x.ExpiresAtUtc).HasColumnType("timestamp with time zone");
+            });
 
             // Configure relationships
             modelBuilder.Entity<StudyTable>()

@@ -63,6 +63,12 @@ builder.Services.AddScoped<Study_Hub.Service.Interface.IPushNotificationService,
 // Report service registration
 builder.Services.AddScoped<IReportService, Study_Hub.Service.ReportService>();
 
+// WiFi Access System Services
+builder.Services.AddScoped<Study_Hub.Service.Interface.IWifiService, Study_Hub.Service.WifiService>();
+builder.Services.Configure<Study_Hub.Models.RouterOptions>(builder.Configuration.GetSection("Router"));
+builder.Services.AddSingleton<Study_Hub.Service.Interface.IRouterManager, Study_Hub.Service.SshRouterManager>();
+builder.Services.AddHostedService<Study_Hub.Service.Background.WifiCleanupService>();
+
 // Register PushServiceClient for Web Push
 builder.Services.AddHttpClient<Lib.Net.Http.WebPush.PushServiceClient>();
 
