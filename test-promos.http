@@ -1,0 +1,213 @@
+### Promo System API Tests
+### Base URL
+@baseUrl = http://localhost:5000/api
+@adminToken = YOUR_ADMIN_JWT_TOKEN_HERE
+@userToken = YOUR_USER_JWT_TOKEN_HERE
+
+### ============================================
+### ADMIN ENDPOINTS
+### ============================================
+
+### 1. Create a Percentage Promo (e.g., 20% bonus)
+POST {{baseUrl}}/admin/promos/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "WELCOME20",
+  "name": "Welcome Bonus - 20%",
+  "description": "Get 20% bonus credits on your first purchase!",
+  "type": "Percentage",
+  "percentageBonus": 20,
+  "minPurchaseAmount": 100,
+  "maxDiscountAmount": 50,
+  "usagePerUser": 1,
+  "startDate": "2025-01-01T00:00:00Z",
+  "endDate": "2025-12-31T23:59:59Z"
+}
+
+### 2. Create a Fixed Amount Promo (e.g., +50 credits)
+POST {{baseUrl}}/admin/promos/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "BONUS50",
+  "name": "Fixed 50 Credits Bonus",
+  "description": "Get 50 extra credits on any purchase!",
+  "type": "FixedAmount",
+  "fixedBonusAmount": 50,
+  "minPurchaseAmount": 200,
+  "usageLimit": 100
+}
+
+### 3. Create a Buy X Get Y Promo (e.g., Buy 100 Get 20)
+POST {{baseUrl}}/admin/promos/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "BUY100GET20",
+  "name": "Buy 100 Credits, Get 20 Free",
+  "description": "For every 100 credits purchased, get 20 free!",
+  "type": "BuyXGetY",
+  "buyAmount": 100,
+  "getAmount": 20,
+  "usageLimit": 500,
+  "usagePerUser": 5,
+  "startDate": "2025-01-01T00:00:00Z",
+  "endDate": "2025-06-30T23:59:59Z"
+}
+
+### 4. Get All Promos
+GET {{baseUrl}}/admin/promos?includeInactive=true
+Authorization: Bearer {{adminToken}}
+
+### 5. Get Promo by ID
+GET {{baseUrl}}/admin/promos/PROMO_ID_HERE
+Authorization: Bearer {{adminToken}}
+
+### 6. Get Promo by Code
+GET {{baseUrl}}/admin/promos/code/WELCOME20
+Authorization: Bearer {{adminToken}}
+
+### 7. Update Promo
+PUT {{baseUrl}}/admin/promos/update
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "promoId": "PROMO_ID_HERE",
+  "name": "Updated Promo Name",
+  "description": "Updated description",
+  "status": "Active",
+  "usageLimit": 200
+}
+
+### 8. Toggle Promo Status (Activate/Deactivate)
+PATCH {{baseUrl}}/admin/promos/toggle-status
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "promoId": "PROMO_ID_HERE",
+  "status": "Inactive"
+}
+
+### 9. Delete Promo (Soft Delete)
+DELETE {{baseUrl}}/admin/promos/delete/PROMO_ID_HERE
+Authorization: Bearer {{adminToken}}
+
+### 10. Get Promo Usage History
+GET {{baseUrl}}/admin/promos/PROMO_ID_HERE/usage-history
+Authorization: Bearer {{adminToken}}
+
+### 11. Get Promo Statistics
+GET {{baseUrl}}/admin/promos/PROMO_ID_HERE/statistics
+Authorization: Bearer {{adminToken}}
+
+### 12. Get All Promo Statistics
+GET {{baseUrl}}/admin/promos/statistics/all
+Authorization: Bearer {{adminToken}}
+
+### ============================================
+### USER ENDPOINTS
+### ============================================
+
+### 13. Get Available Promos (Active Only)
+GET {{baseUrl}}/user/promos/available
+Authorization: Bearer {{userToken}}
+
+### 14. Validate Promo Code (Check if valid before purchase)
+POST {{baseUrl}}/user/promos/validate
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "promoCode": "WELCOME20",
+  "purchaseAmount": 150
+}
+
+### ============================================
+### PURCHASE WITH PROMO CODE WORKFLOW
+### ============================================
+
+### Step 1: User validates promo code
+POST {{baseUrl}}/user/promos/validate
+Authorization: Bearer {{userToken}}
+Content-Type: application/json
+
+{
+  "promoCode": "WELCOME20",
+  "purchaseAmount": 150
+}
+
+### Step 2: User makes purchase (existing endpoint)
+### The backend should apply promo when approving the transaction
+
+### ============================================
+### EXAMPLE PROMO CODES TO CREATE
+### ============================================
+
+### Black Friday Sale - 50% Bonus
+POST {{baseUrl}}/admin/promos/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "BLACKFRIDAY50",
+  "name": "Black Friday - 50% Bonus",
+  "description": "Massive Black Friday sale! Get 50% bonus credits!",
+  "type": "Percentage",
+  "percentageBonus": 50,
+  "minPurchaseAmount": 100,
+  "maxDiscountAmount": 500,
+  "startDate": "2025-11-25T00:00:00Z",
+  "endDate": "2025-11-30T23:59:59Z"
+}
+
+### Student Discount
+POST {{baseUrl}}/admin/promos/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "STUDENT15",
+  "name": "Student Discount",
+  "description": "Students get 15% bonus credits!",
+  "type": "Percentage",
+  "percentageBonus": 15,
+  "minPurchaseAmount": 50,
+  "usagePerUser": 10
+}
+
+### Referral Bonus
+POST {{baseUrl}}/admin/promos/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "REFER100",
+  "name": "Referral Bonus",
+  "description": "Referred users get 100 free credits!",
+  "type": "FixedAmount",
+  "fixedBonusAmount": 100,
+  "minPurchaseAmount": 200,
+  "usagePerUser": 1
+}
+
+### Loyalty Rewards
+POST {{baseUrl}}/admin/promos/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "code": "LOYAL500GET100",
+  "name": "Loyalty Rewards",
+  "description": "Buy 500 credits, get 100 extra!",
+  "type": "BuyXGetY",
+  "buyAmount": 500,
+  "getAmount": 100,
+  "usagePerUser": 3
+}
+

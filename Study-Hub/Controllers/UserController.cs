@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Study_Hub.Models.DTOs;
+using Study_Hub.Services.Interfaces;
 using StudyHubApi.Services.Interfaces;
 using System.Security.Claims;
 
@@ -12,10 +13,12 @@ namespace StudyHubApi.Controllers
     public class UserController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IPromoService _promoService;
 
-        public UserController(IUserService userService)
+        public UserController(IUserService userService, IPromoService promoService)
         {
             _userService = userService;
+            _promoService = promoService;
         }
 
         [HttpGet("credits")]
@@ -90,6 +93,37 @@ namespace StudyHubApi.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ApiResponse<List<SessionWithTableDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        // PROMO ENDPOINTS
+
+        [HttpPost("promos/validate")]
+        public async Task<ActionResult<ApiResponse<ApplyPromoResponseDto>>> ValidatePromo([FromBody] ValidatePromoRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var result = await _promoService.ValidatePromoAsync(userId, request);
+                return Ok(ApiResponse<ApplyPromoResponseDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<ApplyPromoResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("promos/available")]
+        public async Task<ActionResult<ApiResponse<List<PromoDto>>>> GetAvailablePromos()
+        {
+            try
+            {
+                var result = await _promoService.GetAllPromosAsync(includeInactive: false);
+                return Ok(ApiResponse<List<PromoDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<PromoDto>>.ErrorResponse(ex.Message));
             }
         }
     }

@@ -1,0 +1,245 @@
+### Global Settings API Tests
+
+@baseUrl = http://localhost:5000/api
+@adminToken = YOUR_ADMIN_JWT_TOKEN_HERE
+
+### ============================================
+### ADMIN ENDPOINTS - CRUD Operations
+### ============================================
+
+### 1. Get All Settings
+GET {{baseUrl}}/admin/settings
+Authorization: Bearer {{adminToken}}
+
+### 2. Get Setting by ID
+GET {{baseUrl}}/admin/settings/SETTING_ID_HERE
+Authorization: Bearer {{adminToken}}
+
+### 3. Get Setting by Key
+GET {{baseUrl}}/admin/settings/key/system.maintenance_mode
+Authorization: Bearer {{adminToken}}
+
+### 4. Get Settings by Category
+GET {{baseUrl}}/admin/settings/category/system
+Authorization: Bearer {{adminToken}}
+
+### 5. Create Setting - System Maintenance Mode
+POST {{baseUrl}}/admin/settings/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "system.maintenance_mode",
+  "value": "false",
+  "description": "Enable maintenance mode to prevent user access",
+  "dataType": "boolean",
+  "category": "system",
+  "isPublic": true
+}
+
+### 6. Create Setting - Credit Default Amount
+POST {{baseUrl}}/admin/settings/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "credits.default_package_amount",
+  "value": "100",
+  "description": "Default credit package amount",
+  "dataType": "number",
+  "category": "credits",
+  "minValue": 1,
+  "maxValue": 1000
+}
+
+### 7. Create Setting - App Name
+POST {{baseUrl}}/admin/settings/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "system.app_name",
+  "value": "Study Hub",
+  "description": "Application name displayed to users",
+  "dataType": "string",
+  "category": "system",
+  "isPublic": true
+}
+
+### 8. Update Setting
+PUT {{baseUrl}}/admin/settings/update
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "id": "SETTING_ID_HERE",
+  "value": "true",
+  "changeReason": "Enabling maintenance mode for system updates"
+}
+
+### 9. Delete Setting
+DELETE {{baseUrl}}/admin/settings/delete/SETTING_ID_HERE
+Authorization: Bearer {{adminToken}}
+
+### ============================================
+### BULK OPERATIONS
+### ============================================
+
+### 10. Bulk Update Settings
+POST {{baseUrl}}/admin/settings/bulk-update
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "settings": {
+    "system.maintenance_mode": "false",
+    "credits.default_package_amount": "150",
+    "notifications.enabled": "true"
+  },
+  "changeReason": "Bulk configuration update"
+}
+
+### 11. Initialize Default Settings
+POST {{baseUrl}}/admin/settings/initialize-defaults
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "overwriteExisting": false
+}
+
+### ============================================
+### HISTORY & AUDIT
+### ============================================
+
+### 12. Get Setting History
+GET {{baseUrl}}/admin/settings/SETTING_ID_HERE/history
+Authorization: Bearer {{adminToken}}
+
+### 13. Get Recent Changes
+GET {{baseUrl}}/admin/settings/changes/recent?count=20
+Authorization: Bearer {{adminToken}}
+
+### ============================================
+### VALIDATION
+### ============================================
+
+### 14. Validate Setting
+POST {{baseUrl}}/admin/settings/validate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "credits.default_package_amount",
+  "value": "150"
+}
+
+### ============================================
+### IMPORT/EXPORT
+### ============================================
+
+### 15. Export All Settings
+GET {{baseUrl}}/admin/settings/export
+Authorization: Bearer {{adminToken}}
+
+### 16. Export Settings by Category
+GET {{baseUrl}}/admin/settings/export?category=system
+Authorization: Bearer {{adminToken}}
+
+### 17. Import Settings
+POST {{baseUrl}}/admin/settings/import
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "settings": {
+    "system.maintenance_mode": "false",
+    "system.app_name": "Study Hub Pro",
+    "credits.default_package_amount": "100"
+  },
+  "overwriteExisting": true,
+  "importReason": "Restoring from backup"
+}
+
+### ============================================
+### ANALYTICS
+### ============================================
+
+### 18. Get Settings Summary
+GET {{baseUrl}}/admin/settings/summary
+Authorization: Bearer {{adminToken}}
+
+### ============================================
+### EXAMPLE SETTINGS TO CREATE
+### ============================================
+
+### Payment Settings
+POST {{baseUrl}}/admin/settings/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "payment.gcash_enabled",
+  "value": "true",
+  "description": "Enable GCash payment method",
+  "dataType": "boolean",
+  "category": "payment"
+}
+
+### Notification Settings
+POST {{baseUrl}}/admin/settings/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "notifications.push_enabled",
+  "value": "true",
+  "description": "Enable push notifications",
+  "dataType": "boolean",
+  "category": "notifications"
+}
+
+### Security Settings
+POST {{baseUrl}}/admin/settings/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "security.session_timeout_minutes",
+  "value": "30",
+  "description": "User session timeout in minutes",
+  "dataType": "number",
+  "category": "security",
+  "minValue": 5,
+  "maxValue": 1440
+}
+
+### Feature Flags
+POST {{baseUrl}}/admin/settings/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "features.wifi_portal_enabled",
+  "value": "true",
+  "description": "Enable WiFi portal feature",
+  "dataType": "boolean",
+  "category": "features",
+  "isPublic": true
+}
+
+### Limits
+POST {{baseUrl}}/admin/settings/create
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{
+  "key": "limits.max_active_sessions_per_user",
+  "value": "3",
+  "description": "Maximum concurrent active sessions per user",
+  "dataType": "number",
+  "category": "limits",
+  "minValue": 1,
+  "maxValue": 10
+}
+

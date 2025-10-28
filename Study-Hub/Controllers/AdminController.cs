@@ -1,6 +1,7 @@
-﻿﻿using Microsoft.AspNetCore.Authorization;
+﻿﻿﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Study_Hub.Models.DTOs;
+using Study_Hub.Models.Entities;
 using Study_Hub.Services.Interfaces;
 using StudyHubApi.Services.Interfaces;
 using System.Security.Claims;
@@ -12,10 +13,15 @@ namespace StudyHubApi.Controllers
     public class AdminController : ControllerBase
     {
         private readonly IAdminService _adminService;
+        private readonly IPromoService _promoService;
+        private readonly IGlobalSettingsService _globalSettingsService;
 
-        public AdminController(IAdminService adminService)
+        public AdminController(IAdminService adminService, IPromoService promoService,
+            IGlobalSettingsService globalSettingsService)
         {
             _adminService = adminService;
+            _promoService = promoService;
+            _globalSettingsService = globalSettingsService;
         }
 
         [HttpGet("is-admin")]
@@ -68,6 +74,7 @@ namespace StudyHubApi.Controllers
                 return BadRequest(ApiResponse<List<TransactionWithUserDto>>.ErrorResponse(ex.Message));
             }
         }
+
         [HttpGet("transactions/all")]
         public async Task<ActionResult<ApiResponse<List<TransactionWithUserDto>>>> GetAllTransactions()
         {
@@ -87,7 +94,8 @@ namespace StudyHubApi.Controllers
         }
 
         [HttpPost("transactions/approve")]
-        public async Task<ActionResult<ApiResponse<bool>>> ApproveTransaction([FromBody] ApproveTransactionRequestDto request)
+        public async Task<ActionResult<ApiResponse<bool>>> ApproveTransaction(
+            [FromBody] ApproveTransactionRequestDto request)
         {
             try
             {
@@ -108,7 +116,8 @@ namespace StudyHubApi.Controllers
         }
 
         [HttpPost("transactions/reject")]
-        public async Task<ActionResult<ApiResponse<bool>>> RejectTransaction([FromBody] ApproveTransactionRequestDto request)
+        public async Task<ActionResult<ApiResponse<bool>>> RejectTransaction(
+            [FromBody] ApproveTransactionRequestDto request)
         {
             try
             {
@@ -129,7 +138,8 @@ namespace StudyHubApi.Controllers
         }
 
         [HttpPost("tables/create")]
-        public async Task<ActionResult<ApiResponse<CreateTableResponseDto>>> CreateTable([FromBody] CreateTableRequestDto request)
+        public async Task<ActionResult<ApiResponse<CreateTableResponseDto>>> CreateTable(
+            [FromBody] CreateTableRequestDto request)
         {
             try
             {
@@ -145,8 +155,10 @@ namespace StudyHubApi.Controllers
                 return BadRequest(ApiResponse<CreateTableResponseDto>.ErrorResponse(ex.Message));
             }
         }
+
         [HttpPut("tables/update")]
-        public async Task<ActionResult<ApiResponse<UpdateTableResponseDto>>> UpdateTable([FromBody] UpdateTableRequestDto request)
+        public async Task<ActionResult<ApiResponse<UpdateTableResponseDto>>> UpdateTable(
+            [FromBody] UpdateTableRequestDto request)
         {
             try
             {
@@ -162,8 +174,10 @@ namespace StudyHubApi.Controllers
                 return BadRequest(ApiResponse<UpdateTableResponseDto>.ErrorResponse(ex.Message));
             }
         }
+
         [HttpPost("tables/selected")]
-        public async Task<ActionResult<ApiResponse<SelectedTableResponseDto>>> SelectedTable([FromBody] SelectedTableRequestDto request)
+        public async Task<ActionResult<ApiResponse<SelectedTableResponseDto>>> SelectedTable(
+            [FromBody] SelectedTableRequestDto request)
         {
             try
             {
@@ -182,7 +196,8 @@ namespace StudyHubApi.Controllers
 
         [HttpPost("credits/add-approved")]
         [Authorize]
-        public async Task<ActionResult<ApiResponse<AdminAddCreditsResponseDto>>> AddApprovedCredits([FromBody] AdminAddCreditsRequestDto request)
+        public async Task<ActionResult<ApiResponse<AdminAddCreditsResponseDto>>> AddApprovedCredits(
+            [FromBody] AdminAddCreditsRequestDto request)
         {
             try
             {
@@ -191,7 +206,8 @@ namespace StudyHubApi.Controllers
                     return Forbid();
 
                 var result = await _adminService.AddApprovedCreditsAsync(userId, request);
-                return Ok(ApiResponse<AdminAddCreditsResponseDto>.SuccessResponse(result, "Credits added successfully"));
+                return Ok(ApiResponse<AdminAddCreditsResponseDto>.SuccessResponse(result,
+                    "Credits added successfully"));
             }
             catch (Exception ex)
             {
@@ -218,7 +234,8 @@ namespace StudyHubApi.Controllers
         }
 
         [HttpPost("users/toggle-admin")]
-        public async Task<ActionResult<ApiResponse<ToggleUserAdminResponseDto>>> ToggleUserAdmin([FromBody] ToggleUserAdminRequestDto request)
+        public async Task<ActionResult<ApiResponse<ToggleUserAdminResponseDto>>> ToggleUserAdmin(
+            [FromBody] ToggleUserAdminRequestDto request)
         {
             try
             {
@@ -227,7 +244,8 @@ namespace StudyHubApi.Controllers
                     return Forbid();
 
                 var result = await _adminService.ToggleUserAdminAsync(request.UserId);
-                return Ok(ApiResponse<ToggleUserAdminResponseDto>.SuccessResponse(result, "Admin status toggled successfully"));
+                return Ok(ApiResponse<ToggleUserAdminResponseDto>.SuccessResponse(result,
+                    "Admin status toggled successfully"));
             }
             catch (Exception ex)
             {
@@ -253,6 +271,517 @@ namespace StudyHubApi.Controllers
             }
         }
 
+        // PROMO MANAGEMENT ENDPOINTS
+
+        [HttpPost("promos/create")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<PromoDto>>> CreatePromo([FromBody] CreatePromoRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.CreatePromoAsync(userId, request);
+                return Ok(ApiResponse<PromoDto>.SuccessResponse(result, "Promo created successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<PromoDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPut("promos/update")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<PromoDto>>> UpdatePromo([FromBody] UpdatePromoRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.UpdatePromoAsync(userId, request);
+                return Ok(ApiResponse<PromoDto>.SuccessResponse(result, "Promo updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<PromoDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpDelete("promos/delete/{promoId}")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<bool>>> DeletePromo(Guid promoId)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.DeletePromoAsync(promoId);
+                if (!result)
+                    return NotFound(ApiResponse<bool>.ErrorResponse("Promo not found"));
+
+                return Ok(ApiResponse<bool>.SuccessResponse(true, "Promo deleted successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPatch("promos/toggle-status")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<PromoDto>>> TogglePromoStatus(
+            [FromBody] TogglePromoStatusRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.TogglePromoStatusAsync(request.PromoId, request.Status);
+                return Ok(ApiResponse<PromoDto>.SuccessResponse(result, "Promo status updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<PromoDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("promos")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<PromoDto>>>> GetAllPromos(
+            [FromQuery] bool includeInactive = false)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.GetAllPromosAsync(includeInactive);
+                return Ok(ApiResponse<List<PromoDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<PromoDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("promos/{promoId}")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<PromoDto>>> GetPromoById(Guid promoId)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.GetPromoByIdAsync(promoId);
+                if (result == null)
+                    return NotFound(ApiResponse<PromoDto>.ErrorResponse("Promo not found"));
+
+                return Ok(ApiResponse<PromoDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<PromoDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("promos/code/{code}")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<PromoDto>>> GetPromoByCode(string code)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.GetPromoByCodeAsync(code);
+                if (result == null)
+                    return NotFound(ApiResponse<PromoDto>.ErrorResponse("Promo not found"));
+
+                return Ok(ApiResponse<PromoDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<PromoDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("promos/{promoId}/usage-history")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<PromoUsageDto>>>> GetPromoUsageHistory(Guid promoId)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.GetPromoUsageHistoryAsync(promoId);
+                return Ok(ApiResponse<List<PromoUsageDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<PromoUsageDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("promos/{promoId}/statistics")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<PromoStatisticsDto>>> GetPromoStatistics(Guid promoId)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.GetPromoStatisticsAsync(promoId);
+                return Ok(ApiResponse<PromoStatisticsDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<PromoStatisticsDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("promos/statistics/all")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<PromoStatisticsDto>>>> GetAllPromoStatistics()
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _promoService.GetAllPromoStatisticsAsync();
+                return Ok(ApiResponse<List<PromoStatisticsDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<PromoStatisticsDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        // GLOBAL SETTINGS ENDPOINTS
+
+        [HttpGet("settings")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<GlobalSettingDto>>>> GetAllSettings()
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.GetAllSettingsAsync();
+                return Ok(ApiResponse<List<GlobalSettingDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<GlobalSettingDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("settings/{settingId}")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<GlobalSettingDto>>> GetSettingById(Guid settingId)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.GetSettingByIdAsync(settingId);
+                if (result == null)
+                    return NotFound(ApiResponse<GlobalSettingDto>.ErrorResponse("Setting not found"));
+
+                return Ok(ApiResponse<GlobalSettingDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<GlobalSettingDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("settings/key/{key}")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<GlobalSettingDto>>> GetSettingByKey(string key)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.GetSettingByKeyAsync(key);
+                if (result == null)
+                    return NotFound(ApiResponse<GlobalSettingDto>.ErrorResponse("Setting not found"));
+
+                return Ok(ApiResponse<GlobalSettingDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<GlobalSettingDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("settings/category/{category}")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<GlobalSettingDto>>>> GetSettingsByCategory(string category)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.GetSettingsByCategoryAsync(category);
+                return Ok(ApiResponse<List<GlobalSettingDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<GlobalSettingDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("settings/create")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<GlobalSettingDto>>> CreateSetting(
+            [FromBody] CreateGlobalSettingRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.CreateSettingAsync(userId, request);
+                return Ok(ApiResponse<GlobalSettingDto>.SuccessResponse(result, "Setting created successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<GlobalSettingDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPut("settings/update")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<GlobalSettingDto>>> UpdateSetting(
+            [FromBody] UpdateGlobalSettingRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.UpdateSettingAsync(userId, request);
+                return Ok(ApiResponse<GlobalSettingDto>.SuccessResponse(result, "Setting updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<GlobalSettingDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("settings/bulk-update")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<Dictionary<string, GlobalSettingDto>>>> BulkUpdateSettings(
+            [FromBody] BulkUpdateSettingsRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.BulkUpdateSettingsAsync(userId, request);
+                return Ok(ApiResponse<Dictionary<string, GlobalSettingDto>>.SuccessResponse(result,
+                    "Settings updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<Dictionary<string, GlobalSettingDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpDelete("settings/delete/{settingId}")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteSetting(Guid settingId)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.DeleteSettingAsync(settingId);
+                if (!result)
+                    return NotFound(ApiResponse<bool>.ErrorResponse("Setting not found"));
+
+                return Ok(ApiResponse<bool>.SuccessResponse(true, "Setting deleted successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("settings/{settingId}/history")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<GlobalSettingHistoryDto>>>> GetSettingHistory(Guid settingId)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.GetSettingHistoryAsync(settingId);
+                return Ok(ApiResponse<List<GlobalSettingHistoryDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<GlobalSettingHistoryDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("settings/changes/recent")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<List<GlobalSettingHistoryDto>>>> GetRecentChanges(
+            [FromQuery] int count = 50)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.GetRecentChangesAsync(count);
+                return Ok(ApiResponse<List<GlobalSettingHistoryDto>>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<List<GlobalSettingHistoryDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("settings/validate")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<ValidateSettingResponseDto>>> ValidateSetting(
+            [FromBody] ValidateSettingRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.ValidateSettingAsync(request);
+                return Ok(ApiResponse<ValidateSettingResponseDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<ValidateSettingResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("settings/initialize-defaults")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<bool>>> InitializeDefaultSettings(
+            [FromBody] InitializeDefaultSettingsRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result =
+                    await _globalSettingsService.InitializeDefaultSettingsAsync(userId, request.OverwriteExisting);
+                return Ok(ApiResponse<bool>.SuccessResponse(result, "Default settings initialized successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("settings/export")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<ExportSettingsResponseDto>>> ExportSettings(
+            [FromQuery] string? category = null)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.ExportSettingsAsync(category);
+                return Ok(ApiResponse<ExportSettingsResponseDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<ExportSettingsResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("settings/import")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<Dictionary<string, GlobalSettingDto>>>> ImportSettings(
+            [FromBody] ImportSettingsRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.ImportSettingsAsync(userId, request);
+                return Ok(ApiResponse<Dictionary<string, GlobalSettingDto>>.SuccessResponse(result,
+                    "Settings imported successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<Dictionary<string, GlobalSettingDto>>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("settings/summary")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<SettingsSummaryDto>>> GetSettingsSummary()
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _globalSettingsService.GetSettingsSummaryAsync();
+                return Ok(ApiResponse<SettingsSummaryDto>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<SettingsSummaryDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+
         [HttpPost("setup-data")]
         public async Task<ActionResult<ApiResponse<string>>> SetupData()
         {
@@ -272,3 +801,4 @@ namespace StudyHubApi.Controllers
         }
     }
 }
+

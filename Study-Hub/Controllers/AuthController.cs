@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Services.Interfaces;
@@ -75,7 +75,7 @@ namespace StudyHubApi.Controllers
 
         [HttpPost("signout")]
         [Authorize]
-        public ActionResult<ApiResponse> SignOut()
+        public new ActionResult<ApiResponse> SignOut()
         {
             // In a stateless JWT system, signout is handled client-side
             return Ok(ApiResponse.SuccessResponse("Signed out successfully"));

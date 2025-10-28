@@ -1,4 +1,5 @@
-﻿﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿using Microsoft.EntityFrameworkCore;
+using Study_Hub.Models.Entities;
 using Study_Hub.Models.Entities;
 using System.Text.Json;
 
@@ -24,6 +25,11 @@ namespace Study_Hub.Data
         public DbSet<PremiseQrCode> PremiseQrCodes { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<PushSubscription> PushSubscriptions { get; set; }
+        public DbSet<Promo> Promos { get; set; }
+        public DbSet<PromoUsage> PromoUsages { get; set; }
+        public DbSet<WifiAccess> WifiAccesses { get; set; }
+        public DbSet<GlobalSetting> GlobalSettings { get; set; }
+        public DbSet<GlobalSettingHistory> GlobalSettingsHistory { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -57,6 +63,16 @@ namespace Study_Hub.Data
                  .HasConversion(
                     v => v.ToString().ToLower(),  // to DB
                     v => Enum.Parse<UserRole>(v.ToLower(), true)); // from DB
+
+            // Promo enum conversions
+            modelBuilder.Entity<Promo>()
+                .Property(e => e.Type)
+                .HasConversion<string>();
+
+            modelBuilder.Entity<Promo>()
+                .Property(e => e.Status)
+                .HasConversion<string>();
+
             // Configure unique indexes
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
@@ -130,6 +146,36 @@ namespace Study_Hub.Data
                 .HasIndex(ps => ps.IsActive);
 
             // WifiAccess indexes
+            // Promo indexes for performance
+            modelBuilder.Entity<Promo>()
+                .HasIndex(p => p.Code)
+                .IsUnique();
+
+            modelBuilder.Entity<Promo>()
+                .HasIndex(p => p.Status);
+
+            modelBuilder.Entity<Promo>()
+                .HasIndex(p => p.Type);
+
+            modelBuilder.Entity<Promo>()
+                .HasIndex(p => p.IsDeleted);
+
+            modelBuilder.Entity<Promo>()
+                .HasIndex(p => new { p.StartDate, p.EndDate });
+
+            // PromoUsage indexes
+            modelBuilder.Entity<PromoUsage>()
+                .HasIndex(pu => pu.PromoId);
+
+            modelBuilder.Entity<PromoUsage>()
+                .HasIndex(pu => pu.UserId);
+
+            modelBuilder.Entity<PromoUsage>()
+                .HasIndex(pu => pu.TransactionId);
+
+            modelBuilder.Entity<PromoUsage>()
+                .HasIndex(pu => pu.UsedAt);
+
             modelBuilder.Entity<WifiAccess>()
                 .HasIndex(w => w.Password)
                 .IsUnique();
@@ -139,6 +185,26 @@ namespace Study_Hub.Data
 
             modelBuilder.Entity<WifiAccess>()
                 .HasIndex(w => w.Redeemed);
+
+            // GlobalSettings indexes
+            modelBuilder.Entity<GlobalSetting>()
+                .HasIndex(gs => gs.Key)
+                .IsUnique();
+
+            modelBuilder.Entity<GlobalSetting>()
+                .HasIndex(gs => gs.Category);
+
+            modelBuilder.Entity<GlobalSetting>()
+                .HasIndex(gs => gs.IsPublic);
+
+            modelBuilder.Entity<GlobalSettingHistory>()
+                .HasIndex(gsh => gsh.SettingId);
+
+            modelBuilder.Entity<GlobalSettingHistory>()
+                .HasIndex(gsh => gsh.ChangedBy);
+
+            modelBuilder.Entity<GlobalSettingHistory>()
+                .HasIndex(gsh => gsh.ChangedAt);
 
             // WifiAccess configuration
             modelBuilder.Entity<WifiAccess>(b =>
@@ -180,7 +246,8 @@ namespace Study_Hub.Data
             {
                 typeof(AuthAccount), typeof(StudyTable), typeof(UserCredit),
                 typeof(CreditTransaction), typeof(TableSession), typeof(AdminUser),
-                typeof(PremiseActivation), typeof(PremiseQrCode), typeof(Notification)
+                typeof(PremiseActivation), typeof(PremiseQrCode), typeof(Notification),
+                typeof(Promo), typeof(PromoUsage), typeof(GlobalSetting), typeof(GlobalSettingHistory)
             };
 
             foreach (var entityType in entityTypes)
