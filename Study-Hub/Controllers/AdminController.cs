@@ -76,7 +76,7 @@ namespace StudyHubApi.Controllers
         }
 
         [HttpGet("transactions/all")]
-        public async Task<ActionResult<ApiResponse<List<TransactionWithUserDto>>>> GetAllTransactions()
+        public async Task<ActionResult<ApiResponse<List<SessionWithTableDto>>>> GetAllTransactions()
         {
             try
             {
@@ -84,12 +84,12 @@ namespace StudyHubApi.Controllers
                 if (!await _adminService.IsAdminAsync(userId))
                     return Forbid();
 
-                var transactions = await _adminService.GetPendingTransactionsAsync();
-                return Ok(ApiResponse<List<TransactionWithUserDto>>.SuccessResponse(transactions));
+                var transactions = await _adminService.GetAllTableTransactionsAsync();
+                return Ok(ApiResponse<List<SessionWithTableDto>>.SuccessResponse(transactions));
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<List<TransactionWithUserDto>>.ErrorResponse(ex.Message));
+                return BadRequest(ApiResponse<List<SessionWithTableDto>>.ErrorResponse(ex.Message));
             }
         }
 

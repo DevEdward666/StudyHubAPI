@@ -110,6 +110,12 @@ namespace Study_Hub.Models.Entities
         [StringLength(500)]
         public string? ChangeReason { get; set; }
 
+        [Column("created_at")]
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [Column("updated_at")]
+        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
         // Navigation properties
         [ForeignKey("SettingId")]
         public virtual GlobalSetting Setting { get; set; } = null!;

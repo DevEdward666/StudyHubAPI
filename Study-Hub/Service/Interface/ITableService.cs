@@ -9,5 +9,6 @@ namespace StudyHubApi.Services.Interfaces
         Task<Guid> StartTableSessionAsync(Guid userId, StartSessionRequestDto request);
         Task<EndSessionResponseDto> EndTableSessionAsync(Guid userId, Guid sessionId);
         Task<SessionWithTableDto?> GetUserActiveSessionAsync(Guid userId);
+        Task<ChangeTableResponseDto> ChangeTableAsync(Guid userId, ChangeTableRequestDto request);
     }
 }

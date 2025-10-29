@@ -1,4 +1,4 @@
-﻿using Study_Hub.Models.Entities;
+﻿﻿using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -32,8 +32,8 @@ namespace Study_Hub.Models.Entities
         [Column("end_time")]
         public DateTime? EndTime { get; set; }
 
-        [Column("credits_used", TypeName = "decimal(10,2)")]
-        public decimal CreditsUsed { get; set; }
+        [Column("amount", TypeName = "decimal(10,2)")]
+        public decimal Amount { get; set; }
 
         [Required]
         [Column("status")]

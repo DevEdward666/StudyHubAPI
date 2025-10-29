@@ -66,6 +66,8 @@ builder.Services.AddScoped<IReportService, Study_Hub.Service.ReportService>();
 builder.Services.AddScoped<Study_Hub.Services.Interfaces.IPromoService, Study_Hub.Service.PromoService>();
 // Global Settings service registration
 builder.Services.AddScoped<Study_Hub.Services.Interfaces.IGlobalSettingsService, Study_Hub.Service.GlobalSettingsService>();
+// Rate service registration
+builder.Services.AddScoped<Study_Hub.Services.Interfaces.IRateService, Study_Hub.Services.RateService>();
 
 // WiFi Access System Services
 builder.Services.AddScoped<Study_Hub.Service.Interface.IWifiService, Study_Hub.Service.WifiService>();

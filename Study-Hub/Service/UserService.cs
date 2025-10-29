@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿using Microsoft.EntityFrameworkCore;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
@@ -133,7 +133,7 @@ namespace Study_Hub.Services
                 TableId = session.TableId,
                 StartTime = session.StartTime,
                 EndTime = session.EndTime,
-                CreditsUsed = session.CreditsUsed,
+                Amount = session.Amount,
                 Status = session.Status,
                 Table = new StudyTableDto
                 {

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Study_Hub.Data;
@@ -11,9 +12,11 @@ using Study_Hub.Data;
 namespace Study_Hub.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251029122729_AddCreatedAtUpdatedAtToGlobalSettingHistory")]
+    partial class AddCreatedAtUpdatedAtToGlobalSettingHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -762,51 +765,6 @@ namespace Study_Hub.Migrations
                     b.ToTable("push_subscriptions");
                 });
 
-            modelBuilder.Entity("Study_Hub.Models.Entities.Rate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid?>("CreatedBy")
-                        .HasColumnType("uuid")
-                        .HasColumnName("created_by");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
-                        .HasColumnName("description");
-
-                    b.Property<int>("DisplayOrder")
-                        .HasColumnType("integer")
-                        .HasColumnName("display_order");
-
-                    b.Property<int>("Hours")
-                        .HasColumnType("integer")
-                        .HasColumnName("hours");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_active");
-
-                    b.Property<decimal>("Price")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("price");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("rates");
-                });
-
             modelBuilder.Entity("Study_Hub.Models.Entities.StudyTable", b =>
                 {
                     b.Property<Guid>("Id")
@@ -885,15 +843,15 @@ namespace Study_Hub.Migrations
                         .HasColumnName("id")
                         .HasDefaultValueSql("uuid_generate_v4()");
 
-                    b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(10,2)")
-                        .HasColumnName("amount");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<decimal>("CreditsUsed")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("credits_used");
 
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("timestamp with time zone")

@@ -92,5 +92,21 @@ namespace StudyHubApi.Controllers
                 return BadRequest(ApiResponse<SessionWithTableDto?>.ErrorResponse(ex.Message));
             }
         }
+
+        [HttpPost("sessions/change-table")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<ChangeTableResponseDto>>> ChangeTable([FromBody] ChangeTableRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var result = await _tableService.ChangeTableAsync(userId, request);
+                return Ok(ApiResponse<ChangeTableResponseDto>.SuccessResponse(result, result.Message));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<ChangeTableResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
     }
 }

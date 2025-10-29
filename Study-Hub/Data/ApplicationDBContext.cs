@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using Study_Hub.Models.Entities;
 using Study_Hub.Models.Entities;
 using System.Text.Json;
@@ -30,6 +30,7 @@ namespace Study_Hub.Data
         public DbSet<WifiAccess> WifiAccesses { get; set; }
         public DbSet<GlobalSetting> GlobalSettings { get; set; }
         public DbSet<GlobalSettingHistory> GlobalSettingsHistory { get; set; }
+        public DbSet<Rate> Rates { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

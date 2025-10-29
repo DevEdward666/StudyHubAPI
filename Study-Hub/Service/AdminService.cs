@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
@@ -67,6 +67,17 @@ namespace Study_Hub.Services
                 .ToListAsync();
 
             return transactions.Select(MapToTransactionWithUserDto).ToList();
+        }
+
+        public async Task<List<SessionWithTableDto>> GetAllTableTransactionsAsync()
+        {
+            var sessions = await _context.TableSessions
+                .Include(ts => ts.Table)
+                .Include(ts => ts.User)
+                .OrderByDescending(ts => ts.CreatedAt)
+                .ToListAsync();
+
+            return sessions.Select(MapToSessionWithTableDto).ToList();
         }
 
         public async Task<bool> ApproveTransactionAsync(Guid transactionId, Guid adminUserId)
@@ -382,6 +393,34 @@ namespace Study_Hub.Services
                 ApprovedBy = transaction.ApprovedBy,
                 ApprovedAt = transaction.ApprovedAt,
                 CreatedAt = transaction.CreatedAt
+            };
+        }
+
+        private static SessionWithTableDto MapToSessionWithTableDto(TableSession session)
+        {
+            return new SessionWithTableDto
+            {
+                Id = session.Id,
+                UserId = session.UserId,
+                TableId = session.TableId,
+                StartTime = session.StartTime,
+                EndTime = session.EndTime,
+                Amount = session.Amount,
+                Status = session.Status,
+                Table = new StudyTableDto
+                {
+                    Id = session.Table.Id,
+                    TableNumber = session.Table.TableNumber,
+                    QrCode = session.Table.QrCode,
+                    QrCodeImage = session.Table.QrCodeImage,
+                    IsOccupied = session.Table.IsOccupied,
+                    CurrentUserId = session.Table.CurrentUserId,
+                    HourlyRate = session.Table.HourlyRate,
+                    Location = session.Table.Location,
+                    Capacity = session.Table.Capacity,
+                    CreatedAt = session.Table.CreatedAt
+                },
+                CreatedAt = session.CreatedAt
             };
         }
     }

@@ -1,4 +1,4 @@
-﻿using Study_Hub.Models.Entities;
+﻿﻿﻿using Study_Hub.Models.Entities;
 using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 
@@ -40,6 +40,8 @@ namespace Study_Hub.Models.DTOs
         public DateTime endTime { get; set; }
         [Required]
         public int hours { get; set; }
+        [Required]
+        public decimal amount { get; set; }
     }
 
     public class SessionWithTableDto
@@ -49,7 +51,7 @@ namespace Study_Hub.Models.DTOs
         public Guid TableId { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime? EndTime { get; set; }
-        public decimal CreditsUsed { get; set; }
+        public decimal Amount { get; set; }
         public string Status { get; set; }
         public StudyTableDto Table { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -57,7 +59,23 @@ namespace Study_Hub.Models.DTOs
 
     public class EndSessionResponseDto
     {
-        public decimal CreditsUsed { get; set; }
+        public decimal Amount { get; set; }
         public long Duration { get; set; } // Duration in milliseconds
+    }
+
+    public class ChangeTableRequestDto
+    {
+        [Required]
+        public Guid SessionId { get; set; }
+
+        [Required]
+        public Guid NewTableId { get; set; }
+    }
+
+    public class ChangeTableResponseDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public Guid NewSessionId { get; set; }
     }
 }

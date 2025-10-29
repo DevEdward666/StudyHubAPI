@@ -18,34 +18,27 @@ namespace StudyHubApi.Services
         public async Task<List<StudyTableDto>> GetAllTablesAsync()
         {
             var tables = await _context.StudyTables
-                .Include(t => t.TableSessions)
+                .Include(t => t.TableSessions.Where(s => s.Status.ToLower() == "active"))
                 .ToListAsync();
 
-// Filter active sessions in memory
-            foreach (var table in tables)
-            {
-                table.TableSessions = table.TableSessions
-                    .Where(s => s.Status.ToLower().Trim() == "active" && s.TableId == table.Id)
-                    .ToList();
-            }
 
             return tables.Select(MapToStudyTableDtoWithSession).ToList();
         }
 
-// Update or create this mapping method
+        // Update or create this mapping method
         private StudyTableDto MapToStudyTableDtoWithSession(StudyTable table)
         {
             var dto = MapToStudyTableDto(table); // Your existing mapping
     
             // Add active session data
-            var activeSession = table.TableSessions?.FirstOrDefault(s => s.Status.ToLower().Trim() == "active" && s.TableId == table.Id);
+            var activeSession = table.TableSessions?.FirstOrDefault(s => s.Status.ToLower() == "active");
             if (activeSession != null)
             {
                 dto.CurrentSession = new CurrentSessionDto
                 {
                     Id = activeSession.Id,
                     StartTime = activeSession.StartTime,
-                    EndTime = activeSession.EndTime ?? DateTime.UtcNow // Use current time if EndTime is null
+                    EndTime = activeSession.EndTime ?? activeSession.StartTime // Use EndTime which is StartTime + hours
                 };
             }
     
@@ -77,28 +70,23 @@ namespace StudyHubApi.Services
                     ? parsedUserId
                     : userId;
                 
-                var userCredits = await _context.UserCredit
-                    .FirstOrDefaultAsync(uc => uc.UserId == targetUserId);
-
-                if (userCredits == null || userCredits.Balance < table.HourlyRate)
-                    throw new InvalidOperationException("Insufficient credits");
-
+               
                 // Mark table as occupied
                 table.IsOccupied = true;
                 table.CurrentUserId = targetUserId;
                 table.UpdatedAt = DateTime.UtcNow;
-                //Update user credits
-                userCredits.Balance -= table.HourlyRate;
-                userCredits.UpdatedAt = DateTime.UtcNow;
-                userCredits.TotalSpent += table.HourlyRate;
+                
                 // Create session
+                var startTime = DateTime.UtcNow;
+                var endTime = startTime.AddHours(request.hours);
+                
                 var session = new TableSession
                 {
                     UserId = targetUserId,
                     TableId = request.TableId,
-                    StartTime = DateTime.UtcNow,
-                    EndTime = request.endTime,
-                    CreditsUsed = table.HourlyRate * request.hours,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    Amount = request.amount,
                     Status = "active",
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
@@ -152,7 +140,7 @@ namespace StudyHubApi.Services
 
                 // Update session
                 session.EndTime = endTime;
-                session.CreditsUsed = creditsUsed;
+                session.Amount = creditsUsed;
                 session.Status = "completed";
                 session.UpdatedAt = DateTime.UtcNow;
 
@@ -166,7 +154,7 @@ namespace StudyHubApi.Services
 
                 return new EndSessionResponseDto
                 {
-                    CreditsUsed = creditsUsed,
+                    Amount = creditsUsed,
                     Duration = (long)duration.TotalMilliseconds
                 };
             }
@@ -184,6 +172,87 @@ namespace StudyHubApi.Services
                 .FirstOrDefaultAsync(ts => ts.UserId == userId && ts.Status == "active");
 
             return session != null ? MapToSessionWithTableDto(session) : null;
+        }
+
+        public async Task<ChangeTableResponseDto> ChangeTableAsync(Guid userId, ChangeTableRequestDto request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Get the current session
+                var currentSession = await _context.TableSessions
+                    .Include(ts => ts.Table)
+                    .FirstOrDefaultAsync(ts => ts.Id == request.SessionId);
+
+                if (currentSession == null)
+                    throw new InvalidOperationException("Session not found or unauthorized");
+
+                if (currentSession.Status != "active")
+                    throw new InvalidOperationException("Session is not active");
+
+                // Get the new table
+                var newTable = await _context.StudyTables.FindAsync(request.NewTableId);
+                if (newTable == null)
+                    throw new InvalidOperationException("New table not found");
+
+                if (newTable.IsOccupied)
+                    throw new InvalidOperationException("New table is already occupied");
+
+                // Get the old table
+                var oldTable = currentSession.Table;
+
+                // Free up the old table
+                oldTable.IsOccupied = false;
+                oldTable.CurrentUserId = null;
+                oldTable.UpdatedAt = DateTime.UtcNow;
+
+                // End the current session
+                currentSession.EndTime = DateTime.UtcNow;
+                currentSession.Status = "completed";
+                currentSession.UpdatedAt = DateTime.UtcNow;
+
+                // Occupy the new table
+                newTable.IsOccupied = true;
+                newTable.CurrentUserId = userId;
+                newTable.UpdatedAt = DateTime.UtcNow;
+
+                // Calculate remaining time from original session
+                var originalEndTime = currentSession.EndTime;
+                var now = DateTime.UtcNow;
+                var remainingTime = originalEndTime.HasValue ? (originalEndTime.Value - now).TotalHours : 0;
+
+                // Create new session on the new table with remaining time
+                var newStartTime = currentSession.StartTime;
+                var newEndTime = remainingTime > 0 ? newStartTime.AddHours(remainingTime) : newStartTime.AddHours(1);
+
+                var newSession = new TableSession
+                {
+                    UserId = userId,
+                    TableId = request.NewTableId,
+                    StartTime = newStartTime,
+                    EndTime = newEndTime,
+                    Amount = currentSession.Amount, // Transfer the same amount
+                    Status = "active",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.TableSessions.Add(newSession);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new ChangeTableResponseDto
+                {
+                    Success = true,
+                    Message = $"Successfully changed from {oldTable.TableNumber} to {newTable.TableNumber}",
+                    NewSessionId = newSession.Id
+                };
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                throw new InvalidOperationException($"Failed to change table: {ex.Message}");
+            }
         }
 
         private static StudyTableDto MapToStudyTableDto(StudyTable table)
@@ -212,7 +281,7 @@ namespace StudyHubApi.Services
                 TableId = session.TableId,
                 StartTime = session.StartTime,
                 EndTime = session.EndTime,
-                CreditsUsed = session.CreditsUsed,
+                Amount = session.Amount,
                 Status = session.Status,
                 Table = MapToStudyTableDto(session.Table),
                 CreatedAt = session.CreatedAt
