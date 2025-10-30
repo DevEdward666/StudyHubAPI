@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿﻿using System.ComponentModel.DataAnnotations;
 
 namespace Study_Hub.Models.DTOs
 {
@@ -42,6 +42,7 @@ namespace Study_Hub.Models.DTOs
         public string? Name { get; set; }
         public string? Image { get; set; }
         public bool EmailVerified { get; set; }
+        public string Role { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

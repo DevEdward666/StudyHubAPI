@@ -76,7 +76,7 @@ namespace StudyHubApi.Controllers
         }
 
         [HttpGet("transactions/all")]
-        public async Task<ActionResult<ApiResponse<List<SessionWithTableDto>>>> GetAllTransactions()
+        public async Task<ActionResult<ApiResponse<List<TransactionWithUserDto>>>> GetAllTransactions()
         {
             try
             {
@@ -85,11 +85,11 @@ namespace StudyHubApi.Controllers
                     return Forbid();
 
                 var transactions = await _adminService.GetAllTableTransactionsAsync();
-                return Ok(ApiResponse<List<SessionWithTableDto>>.SuccessResponse(transactions));
+                return Ok(ApiResponse<List<TransactionWithUserDto>>.SuccessResponse(transactions));
             }
             catch (Exception ex)
             {
-                return BadRequest(ApiResponse<List<SessionWithTableDto>>.ErrorResponse(ex.Message));
+                return BadRequest(ApiResponse<List<TransactionWithUserDto>>.ErrorResponse(ex.Message));
             }
         }
 
@@ -250,6 +250,46 @@ namespace StudyHubApi.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ApiResponse<ToggleUserAdminResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("users/create")]
+        public async Task<ActionResult<ApiResponse<CreateUserResponseDto>>> CreateUser(
+            [FromBody] CreateUserRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _adminService.CreateUserAsync(request);
+                return Ok(ApiResponse<CreateUserResponseDto>.SuccessResponse(result,
+                    "User created successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<CreateUserResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPut("users/update")]
+        public async Task<ActionResult<ApiResponse<UpdateUserResponseDto>>> UpdateUser(
+            [FromBody] UpdateUserRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _adminService.UpdateUserAsync(request);
+                return Ok(ApiResponse<UpdateUserResponseDto>.SuccessResponse(result,
+                    "User updated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<UpdateUserResponseDto>.ErrorResponse(ex.Message));
             }
         }
 

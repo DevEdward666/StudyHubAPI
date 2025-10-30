@@ -68,26 +68,26 @@ namespace Study_Hub.Service
 
         private async Task<TransactionReportDto> GenerateReportAsync(ReportPeriod period, DateTime startDate, DateTime endDate)
         {
-            // Get all transactions in the period
-            var transactions = await _context.CreditTransactions
+            // Get all table sessions in the period
+            var sessions = await _context.TableSessions
                 .Include(t => t.User)
                 .Where(t => t.CreatedAt >= startDate && t.CreatedAt <= endDate)
                 .ToListAsync();
 
             // Calculate summary
-            var summary = CalculateSummary(transactions);
+            var summary = CalculateSummaryFromSessions(sessions);
 
             // Group by status
-            var byStatus = GroupByStatus(transactions);
+            var byStatus = GroupSessionsByStatus(sessions);
 
             // Group by payment method
-            var byPaymentMethod = GroupByPaymentMethod(transactions);
+            var byPaymentMethod = GroupSessionsByPaymentMethod(sessions);
 
             // Daily breakdown
-            var dailyBreakdown = CalculateDailyBreakdown(transactions, startDate, endDate);
+            var dailyBreakdown = CalculateSessionsDailyBreakdown(sessions, startDate, endDate);
 
             // Top users
-            var topUsers = CalculateTopUsers(transactions);
+            var topUsers = CalculateTopUsersFromSessions(sessions);
 
             return new TransactionReportDto
             {
@@ -102,53 +102,49 @@ namespace Study_Hub.Service
             };
         }
 
-        private TransactionSummaryDto CalculateSummary(List<CreditTransaction> transactions)
+        private TransactionSummaryDto CalculateSummaryFromSessions(List<TableSession> sessions)
         {
-            var totalTransactions = transactions.Count;
-            var totalAmount = transactions.Sum(t => t.Amount);
-            var totalCost = transactions.Sum(t => t.Cost);
-
-            var approved = transactions.Where(t => t.Status == TransactionStatus.Approved).ToList();
-            var pending = transactions.Where(t => t.Status == TransactionStatus.Pending).ToList();
-            var rejected = transactions.Where(t => t.Status == TransactionStatus.Rejected).ToList();
+            var totalTransactions = sessions.Count;
+            var totalAmount = sessions.Sum(t => t.Amount);
 
             return new TransactionSummaryDto
             {
                 TotalTransactions = totalTransactions,
                 TotalAmount = totalAmount,
-                TotalCost = totalCost,
+                TotalCost = totalAmount, // For sessions, cost equals amount
                 AverageTransactionAmount = totalTransactions > 0 ? totalAmount / totalTransactions : 0,
-                ApprovedCount = approved.Count,
-                PendingCount = pending.Count,
-                RejectedCount = rejected.Count,
-                ApprovedAmount = approved.Sum(t => t.Amount),
-                PendingAmount = pending.Sum(t => t.Amount),
-                RejectedAmount = rejected.Sum(t => t.Amount)
+                ApprovedCount = 0,
+                PendingCount = 0,
+                RejectedCount = 0,
+                ApprovedAmount = 0,
+                PendingAmount = 0,
+                RejectedAmount = 0
             };
         }
 
-        private List<TransactionByStatusDto> GroupByStatus(List<CreditTransaction> transactions)
+        private List<TransactionByStatusDto> GroupSessionsByStatus(List<TableSession> sessions)
         {
-            var totalTransactions = transactions.Count;
+            var totalSessions = sessions.Count;
 
-            return transactions
+            return sessions
                 .GroupBy(t => t.Status)
                 .Select(g => new TransactionByStatusDto
                 {
-                    Status = g.Key,
+                    Status = g.Key == "active" ? TransactionStatus.Pending : TransactionStatus.Approved,
                     Count = g.Count(),
                     TotalAmount = g.Sum(t => t.Amount),
-                    TotalCost = g.Sum(t => t.Cost),
-                    Percentage = totalTransactions > 0 ? (decimal)g.Count() / totalTransactions * 100 : 0
+                    TotalCost = g.Sum(t => t.Amount),
+                    Percentage = totalSessions > 0 ? (decimal)g.Count() / totalSessions * 100 : 0
                 })
                 .OrderByDescending(s => s.Count)
                 .ToList();
         }
 
-        private List<TransactionByPaymentMethodDto> GroupByPaymentMethod(List<CreditTransaction> transactions)
+        private List<TransactionByPaymentMethodDto> GroupSessionsByPaymentMethod(List<TableSession> sessions)
         {
-            return transactions
-                .GroupBy(t => t.PaymentMethod)
+            return sessions
+                .Where(t => !string.IsNullOrEmpty(t.PaymentMethod))
+                .GroupBy(t => t.PaymentMethod!)
                 .Select(g => new TransactionByPaymentMethodDto
                 {
                     PaymentMethod = g.Key,
@@ -158,6 +154,43 @@ namespace Study_Hub.Service
                 })
                 .OrderByDescending(pm => pm.TotalAmount)
                 .ToList();
+        }
+
+        private List<DailyTransactionDto> CalculateSessionsDailyBreakdown(List<TableSession> sessions, DateTime startDate, DateTime endDate)
+        {
+            return sessions
+                .GroupBy(t => t.CreatedAt.Date)
+                .Select(g => new DailyTransactionDto
+                {
+                    Date = DateTime.SpecifyKind(g.Key, DateTimeKind.Utc),
+                    Count = g.Count(),
+                    TotalAmount = g.Sum(t => t.Amount),
+                    TotalCost = g.Sum(t => t.Amount),
+                    ApprovedCount = 0,
+                    PendingCount = 0,
+                    RejectedCount = 0
+                })
+                .OrderBy(d => d.Date)
+                .ToList();
+        }
+
+        private List<TopUserDto> CalculateTopUsersFromSessions(List<TableSession> sessions)
+        {
+            return sessions
+                .GroupBy(t => new { t.UserId, t.User.Name, t.User.Email })
+                .Select(g => new TopUserDto
+                {
+                    UserId = g.Key.UserId,
+                    UserName = g.Key.Name,
+                    UserEmail = g.Key.Email,
+                    TransactionCount = g.Count(),
+                    TotalAmount = g.Sum(t => t.Amount),
+                    TotalCost = g.Sum(t => t.Amount)
+                })
+                .OrderByDescending(u => u.TotalAmount)
+                .Take(10)
+                .ToList();
+        
         }
 
         private List<DailyTransactionDto> CalculateDailyBreakdown(List<CreditTransaction> transactions, DateTime startDate, DateTime endDate)

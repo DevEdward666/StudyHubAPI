@@ -1,4 +1,4 @@
-﻿﻿using Study_Hub.Models.Entities;
+﻿﻿﻿using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -38,6 +38,15 @@ namespace Study_Hub.Models.Entities
         [Required]
         [Column("status")]
         public string Status { get; set; } = "active";
+
+        [Column("payment_method")]
+        public string? PaymentMethod { get; set; }
+
+        [Column("cash", TypeName = "decimal(10,2)")]
+        public decimal? Cash { get; set; }
+
+        [Column("change", TypeName = "decimal(10,2)")]
+        public decimal? Change { get; set; }
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }

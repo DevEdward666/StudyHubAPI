@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Study_Hub.Models.Entities
@@ -34,6 +34,10 @@ namespace Study_Hub.Models.Entities
 
         [Column("is_anonymous")]
         public bool IsAnonymous { get; set; }
+
+        [Column("role")]
+        [StringLength(50)]
+        public string Role { get; set; } = "Staff";
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }

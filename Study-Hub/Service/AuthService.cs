@@ -159,6 +159,7 @@ namespace Study_Hub.Services
                 Email = user.Email,
                 Name = user.Name,
                 Image = user.Image,
+                Role = user.Role,
                 EmailVerified = user.EmailVerified,
                 CreatedAt = user.CreatedAt,
                 UpdatedAt = user.UpdatedAt

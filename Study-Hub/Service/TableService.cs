@@ -19,6 +19,7 @@ namespace StudyHubApi.Services
         {
             var tables = await _context.StudyTables
                 .Include(t => t.TableSessions.Where(s => s.Status.ToLower() == "active"))
+                    .ThenInclude(s => s.User)
                 .ToListAsync();
 
 
@@ -30,15 +31,17 @@ namespace StudyHubApi.Services
         {
             var dto = MapToStudyTableDto(table); // Your existing mapping
     
-            // Add active session data
-            var activeSession = table.TableSessions?.FirstOrDefault(s => s.Status.ToLower() == "active");
+            // Add active session data 
+           var activeSession = table.TableSessions?.FirstOrDefault(s => s.Status.ToLower() == "active");
             if (activeSession != null)
             {
                 dto.CurrentSession = new CurrentSessionDto
                 {
                     Id = activeSession.Id,
                     StartTime = activeSession.StartTime,
-                    EndTime = activeSession.EndTime ?? activeSession.StartTime // Use EndTime which is StartTime + hours
+                    EndTime = activeSession.EndTime ?? activeSession.StartTime,
+                    CustomerName = activeSession.User.Name ?? "Guest",
+                    // Use EndTime which is StartTime + hours
                 };
             }
     
@@ -88,6 +91,9 @@ namespace StudyHubApi.Services
                     EndTime = endTime,
                     Amount = request.amount,
                     Status = "active",
+                    PaymentMethod = request.PaymentMethod,
+                    Cash = request.Cash,
+                    Change = request.Change,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -207,7 +213,7 @@ namespace StudyHubApi.Services
                 oldTable.UpdatedAt = DateTime.UtcNow;
 
                 // End the current session
-                currentSession.EndTime = DateTime.UtcNow;
+                // currentSession.EndTime = DateTime.UtcNow;
                 currentSession.Status = "completed";
                 currentSession.UpdatedAt = DateTime.UtcNow;
 
@@ -223,7 +229,7 @@ namespace StudyHubApi.Services
 
                 // Create new session on the new table with remaining time
                 var newStartTime = currentSession.StartTime;
-                var newEndTime = remainingTime > 0 ? newStartTime.AddHours(remainingTime) : newStartTime.AddHours(1);
+                var newEndTime = currentSession.EndTime;
 
                 var newSession = new TableSession
                 {

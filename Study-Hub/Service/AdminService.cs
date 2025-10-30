@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
@@ -27,6 +27,7 @@ namespace Study_Hub.Services
                 var users = await _context.Users
                     .Include(u => u.UserCredits)
                     .Include(u => u.TableSessions)
+                    .Where(x=> x.Role != "Admin") // Exclude admin users
                     .ToListAsync();
 
                 return users.Select(user => new UserWithInfoDto
@@ -37,6 +38,7 @@ namespace Study_Hub.Services
                     Credits = user.UserCredits?.Balance ?? 0,
                     IsAdmin = user.AdminUser != null,
                     HasActiveSession = user.TableSessions?.Any(ts => ts.Status == "active") ?? false, // Null check here
+                    Role = user.Role,
                     CreatedAt = user.CreatedAt
                 }).ToList();
             }
@@ -50,34 +52,26 @@ namespace Study_Hub.Services
 
         public async Task<List<TransactionWithUserDto>> GetPendingTransactionsAsync()
         {
-            var transactions = await _context.CreditTransactions
-                .Include(ct => ct.User)
-                .Where(ct => ct.Status == TransactionStatus.Pending)
-                .OrderByDescending(ct => ct.CreatedAt)
+            var transactions = await _context.TableSessions
+                .Include(ts => ts.User)
+                .Include(ts => ts.Table)
+                .Where(ts => ts.Status == "active")
+                .OrderByDescending(ts => ts.CreatedAt)
                 .ToListAsync();
 
             return transactions.Select(MapToTransactionWithUserDto).ToList();
         }
-        
-        public async Task<List<TransactionWithUserDto>> GetAllTransactionsAsync()
-        {
-            var transactions = await _context.CreditTransactions
-                .Include(ct => ct.User)
-                .OrderByDescending(ct => ct.CreatedAt)
-                .ToListAsync();
-
-            return transactions.Select(MapToTransactionWithUserDto).ToList();
-        }
-
-        public async Task<List<SessionWithTableDto>> GetAllTableTransactionsAsync()
+    
+        public async Task<List<TransactionWithUserDto>> GetAllTableTransactionsAsync()
         {
             var sessions = await _context.TableSessions
                 .Include(ts => ts.Table)
                 .Include(ts => ts.User)
+                .Where(ts => ts.Status != "active")
                 .OrderByDescending(ts => ts.CreatedAt)
                 .ToListAsync();
 
-            return sessions.Select(MapToSessionWithTableDto).ToList();
+            return sessions.Select(MapToTransactionWithUserDto).ToList();
         }
 
         public async Task<bool> ApproveTransactionAsync(Guid transactionId, Guid adminUserId)
@@ -322,6 +316,166 @@ namespace Study_Hub.Services
             }
         }
 
+        public async Task<CreateUserResponseDto> CreateUserAsync(CreateUserRequestDto request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Check if user already exists
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email == request.Email);
+
+                if (existingUser != null)
+                {
+                    throw new InvalidOperationException("User with this email already exists");
+                }
+
+                // Validate role
+                var validRoles = new[] { "Staff", "Admin", "Super Admin" };
+                if (!validRoles.Contains(request.Role))
+                {
+                    throw new InvalidOperationException("Invalid role. Must be Staff, Admin, or Super Admin");
+                }
+
+                // Create new user
+                var newUser = new User
+                {
+                    Email = request.Email,
+                    Name = request.Name,
+                    Role = request.Role,
+                    EmailVerified = false,
+                    PhoneVerified = false,
+                    IsAnonymous = false,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(newUser);
+                await _context.SaveChangesAsync();
+
+           
+
+                // If role is Admin or Super Admin, create AdminUser entry
+                if (request.Role == "Admin" || request.Role == "Super Admin")
+                {
+                    var adminUser = new AdminUser
+                    {
+                        UserId = newUser.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.AdminUsers.Add(adminUser);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new CreateUserResponseDto
+                {
+                    UserId = newUser.Id,
+                    Email = newUser.Email,
+                    Name = newUser.Name ?? "",
+                    Role = newUser.Role,
+                    IsAdmin = newUser.Role == "Admin" || newUser.Role == "Super Admin"?  true : false,
+                    HasActiveSession = false,
+                    Id = newUser.Id.ToString(),
+                    CreatedAt = newUser.CreatedAt.ToString()
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<UpdateUserResponseDto> UpdateUserAsync(UpdateUserRequestDto request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Find existing user
+                var user = await _context.Users
+                    .Include(u => u.AdminUser)
+                    .FirstOrDefaultAsync(u => u.Id == request.UserId);
+
+                if (user == null)
+                {
+                    throw new InvalidOperationException("User not found");
+                }
+
+                // Check if email is being changed and if it's already taken by another user
+                if (user.Email != request.Email)
+                {
+                    var emailExists = await _context.Users
+                        .AnyAsync(u => u.Email == request.Email && u.Id != request.UserId);
+                    
+                    if (emailExists)
+                    {
+                        throw new InvalidOperationException("Email is already in use by another user");
+                    }
+                }
+
+                // Validate role
+                var validRoles = new[] { "Staff", "Admin", "Super Admin" };
+                if (!validRoles.Contains(request.Role))
+                {
+                    throw new InvalidOperationException("Invalid role. Must be Staff, Admin, or Super Admin");
+                }
+
+                var oldRole = user.Role;
+                
+                // Update user properties
+                user.Email = request.Email;
+                user.Name = request.Name;
+                user.Role = request.Role;
+                user.Phone = request.Phone;
+                user.UpdatedAt = DateTime.UtcNow;
+
+                // Handle AdminUser entry based on role change
+                var hasAdminEntry = user.AdminUser != null;
+                var shouldHaveAdminEntry = request.Role == "Admin" || request.Role == "Super Admin";
+
+                if (shouldHaveAdminEntry && !hasAdminEntry)
+                {
+                    // Create AdminUser entry
+                    var adminUser = new AdminUser
+                    {
+                        UserId = user.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.AdminUsers.Add(adminUser);
+                }
+                else if (!shouldHaveAdminEntry && hasAdminEntry)
+                {
+                    // Remove AdminUser entry
+                    _context.AdminUsers.Remove(user.AdminUser);
+                }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new UpdateUserResponseDto
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Name = user.Name ?? "",
+                    Role = user.Role,
+                    Phone = user.Phone,
+                    IsAdmin = user.Role == "Admin" || user.Role == "Super Admin"?  true : false,
+                    HasActiveSession = false,
+                    Id = user.Id.ToString(),
+                    CreatedAt = user.CreatedAt.ToString()
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
         public async Task<QRGenerationResponseDto> GenerateTableQRAsync(Guid tableId)
         {
             var table = await _context.StudyTables.FindAsync(tableId);
@@ -370,12 +524,15 @@ namespace Study_Hub.Services
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        private static TransactionWithUserDto MapToTransactionWithUserDto(CreditTransaction transaction)
+        private static TransactionWithUserDto MapToTransactionWithUserDto(TableSession transaction)
         {
             return new TransactionWithUserDto
             {
                 Id = transaction.Id,
                 UserId = transaction.UserId,
+                TableId = transaction.TableId,
+                StartTime = transaction.StartTime,
+                EndTime = transaction.EndTime,
                 User = new UserDto
                 {
                     Id = transaction.User.Id,
@@ -383,15 +540,28 @@ namespace Study_Hub.Services
                     Name = transaction.User.Name,
                     EmailVerified = transaction.User.EmailVerified,
                     CreatedAt = transaction.User.CreatedAt,
-                    UpdatedAt = transaction.User.UpdatedAt
+                    UpdatedAt = transaction.User.UpdatedAt,
+                    Role = transaction.User.Role,
                 },
+                Tables = transaction.Table != null ? new StudyTable
+                {
+                    Id = transaction.Table.Id,
+                    TableNumber = transaction.Table.TableNumber,
+                    QrCode = transaction.Table.QrCode,
+                    QrCodeImage = transaction.Table.QrCodeImage,
+                    IsOccupied = transaction.Table.IsOccupied,
+                    CurrentUserId = transaction.Table.CurrentUserId,
+                    HourlyRate = transaction.Table.HourlyRate,
+                    Location = transaction.Table.Location,
+                    Capacity = transaction.Table.Capacity,
+                    CreatedAt = transaction.Table.CreatedAt
+                } : null,
                 Amount = transaction.Amount,
-                Cost = transaction.Cost,
+                Cost = transaction.Amount,
                 Status = transaction.Status,
                 PaymentMethod = transaction.PaymentMethod,
-                TransactionId = transaction.TransactionId,
-                ApprovedBy = transaction.ApprovedBy,
-                ApprovedAt = transaction.ApprovedAt,
+                Cash = transaction.Cash,
+                Change = transaction.Change,
                 CreatedAt = transaction.CreatedAt
             };
         }

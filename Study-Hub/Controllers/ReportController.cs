@@ -216,23 +216,17 @@ namespace Study_Hub.Controllers
                     Today = new
                     {
                         Transactions = today.Summary.TotalTransactions,
-                        Amount = today.Summary.TotalAmount,
-                        Approved = today.Summary.ApprovedCount,
-                        Pending = today.Summary.PendingCount
+                        Amount = today.Summary.TotalAmount
                     },
                     ThisWeek = new
                     {
                         Transactions = thisWeek.Summary.TotalTransactions,
-                        Amount = thisWeek.Summary.TotalAmount,
-                        Approved = thisWeek.Summary.ApprovedCount,
-                        Pending = thisWeek.Summary.PendingCount
+                        Amount = thisWeek.Summary.TotalAmount
                     },
                     ThisMonth = new
                     {
                         Transactions = thisMonth.Summary.TotalTransactions,
-                        Amount = thisMonth.Summary.TotalAmount,
-                        Approved = thisMonth.Summary.ApprovedCount,
-                        Pending = thisMonth.Summary.PendingCount
+                        Amount = thisMonth.Summary.TotalAmount
                     }
                 };
 

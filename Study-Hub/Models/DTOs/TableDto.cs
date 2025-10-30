@@ -1,4 +1,4 @@
-﻿﻿﻿using Study_Hub.Models.Entities;
+﻿﻿﻿﻿using Study_Hub.Models.Entities;
 using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 
@@ -25,6 +25,7 @@ namespace Study_Hub.Models.DTOs
         public Guid Id { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
+        public string CustomerName { get; set; }
     }
 
     public class StartSessionRequestDto
@@ -42,6 +43,12 @@ namespace Study_Hub.Models.DTOs
         public int hours { get; set; }
         [Required]
         public decimal amount { get; set; }
+        
+        public string? PaymentMethod { get; set; }
+        
+        public decimal? Cash { get; set; }
+        
+        public decimal? Change { get; set; }
     }
 
     public class SessionWithTableDto
