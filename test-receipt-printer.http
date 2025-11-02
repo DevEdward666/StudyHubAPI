@@ -1,0 +1,104 @@
+### Thermal Receipt Printer Test Endpoints
+### Base URL
+@baseUrl = http://localhost:5000
+@token = YOUR_JWT_TOKEN_HERE
+@sessionId = YOUR_SESSION_ID_HERE
+
+### 1. Start Session (Auto-prints receipt)
+POST {{baseUrl}}/api/tables/sessions/start
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tableId": "your-table-guid-here",
+  "hours": 2,
+  "amount": 100.00,
+  "paymentMethod": "Cash",
+  "cash": 150.00,
+  "change": 50.00
+}
+
+### Expected Response:
+# {
+#   "success": true,
+#   "data": "session-guid",
+#   "message": "Session started successfully"
+# }
+# Note: Receipt will print automatically in the background
+
+###
+
+### 2. Print/Reprint Receipt for Existing Session
+POST {{baseUrl}}/api/tables/sessions/{{sessionId}}/print-receipt
+Authorization: Bearer {{token}}
+
+### Expected Response:
+# {
+#   "success": true,
+#   "data": true,
+#   "message": "Receipt printed successfully"
+# }
+
+###
+
+### 3. Preview/Download Receipt (Binary)
+GET {{baseUrl}}/api/tables/sessions/{{sessionId}}/receipt-preview
+Authorization: Bearer {{token}}
+
+### Expected Response: Binary file (receipt.bin)
+# Download the file and send to printer or inspect with hex editor
+
+###
+
+### 4. Get Active Session (to get sessionId)
+GET {{baseUrl}}/api/tables/sessions/active
+Authorization: Bearer {{token}}
+
+### Expected Response:
+# {
+#   "success": true,
+#   "data": {
+#     "id": "session-guid",
+#     "table": { ... },
+#     "startTime": "2025-11-02T14:30:00Z",
+#     ...
+#   }
+# }
+
+###
+
+### TEST SCENARIOS
+
+### Scenario 1: Complete Transaction with Receipt
+# 1. Start session (receipt auto-prints)
+# 2. Wait for customer to finish
+# 3. End session if needed
+# 4. Reprint receipt if customer requests
+
+### Scenario 2: Lost Receipt
+# Customer lost receipt, staff reprints:
+POST {{baseUrl}}/api/tables/sessions/{{sessionId}}/print-receipt
+Authorization: Bearer {{token}}
+
+### Scenario 3: Preview Before Printing
+# Check receipt format before actual print:
+GET {{baseUrl}}/api/tables/sessions/{{sessionId}}/receipt-preview
+Authorization: Bearer {{token}}
+
+###
+
+### NOTES:
+# - Replace {{token}} with actual JWT token from login
+# - Replace {{sessionId}} with actual session ID from session start
+# - Receipt includes QR code with WiFi password "password1234"
+# - Receipt is saved to temp directory (check logs for location)
+# - For actual printing, implement Bluetooth connection in ThermalPrinterService
+
+###
+
+### Get All Tables (to get tableId)
+GET {{baseUrl}}/api/tables
+Authorization: Bearer {{token}}
+
+###
+

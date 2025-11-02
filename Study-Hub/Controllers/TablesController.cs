@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Study_Hub.Models.DTOs;
 using StudyHubApi.Services.Interfaces;
 using System.Security.Claims;
+using Microsoft.EntityFrameworkCore;
+using Study_Hub.Data;
+using Study_Hub.Service.Interface;
 
 namespace StudyHubApi.Controllers
 {
@@ -11,10 +14,14 @@ namespace StudyHubApi.Controllers
     public class TablesController : ControllerBase
     {
         private readonly ITableService _tableService;
+        private readonly IThermalPrinterService _printerService;
+        private readonly ApplicationDbContext _context;
 
-        public TablesController(ITableService tableService)
+        public TablesController(ITableService tableService, IThermalPrinterService printerService, ApplicationDbContext context)
         {
             _tableService = tableService;
+            _printerService = printerService;
+            _context = context;
         }
 
         [HttpGet]
@@ -53,6 +60,50 @@ namespace StudyHubApi.Controllers
             {
                 var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
                 var sessionId = await _tableService.StartTableSessionAsync(userId, request);
+                
+                // Get session details for receipt
+                var session = await _context.TableSessions
+                    .Include(s => s.User)
+                    .Include(s => s.Table)
+                    .FirstOrDefaultAsync(s => s.Id == sessionId);
+                
+                if (session != null)
+                {
+                    // Prepare receipt data
+                    var receipt = new ReceiptDto
+                    {
+                        TransactionId = session.Id.ToString(),
+                        TransactionDate = session.CreatedAt,
+                        CustomerName = session.User?.Name ?? "Guest",
+                        TableNumber = session.Table?.TableNumber ?? "Unknown",
+                        StartTime = session.StartTime,
+                        EndTime = session.EndTime ?? session.StartTime.AddHours(request.hours),
+                        HourlyRate = session.Table?.HourlyRate ?? 0,
+                        Hours = request.hours,
+                        TotalAmount = session.Amount,
+                        PaymentMethod = session.PaymentMethod ?? "Cash",
+                        Cash = session.Cash,
+                        Change = session.Change,
+                        WifiPassword = "password1234",
+                        BusinessName = "Sunny Side Up Work + Study",
+                        BusinessAddress = "Your Business Address",
+                        BusinessContact = "Contact: 09XX-XXX-XXXX"
+                    };
+                    
+                    // Print receipt (async - don't wait for it to complete)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _printerService.PrintReceiptAsync(receipt);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to print receipt: {ex.Message}");
+                        }
+                    });
+                }
+                
                 return Ok(ApiResponse<Guid>.SuccessResponse(sessionId, "Session started successfully"));
             }
             catch (Exception ex)
@@ -106,6 +157,118 @@ namespace StudyHubApi.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ApiResponse<ChangeTableResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("sessions/{sessionId}/print-receipt")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<bool>>> PrintReceipt(Guid sessionId, [FromBody] PrintReceiptRequest? request = null)
+        {
+            try
+            {
+                var session = await _context.TableSessions
+                    .Include(s => s.User)
+                    .Include(s => s.Table)
+                    .FirstOrDefaultAsync(s => s.Id == sessionId);
+                
+                if (session == null)
+                {
+                    return NotFound(ApiResponse<bool>.ErrorResponse("Session not found"));
+                }
+                
+                // Calculate hours
+                var endTime = session.EndTime ?? DateTime.UtcNow;
+                var duration = endTime - session.StartTime;
+                var hours = Math.Ceiling(duration.TotalHours);
+                
+                // Use custom password if provided, otherwise use default
+                var wifiPassword = request?.WifiPassword ?? "password1234";
+
+                var receipt = new ReceiptDto
+                {
+                    TransactionId = session.Id.ToString(),
+                    TransactionDate = session.CreatedAt,
+                    CustomerName = session.User?.Name ?? "Guest",
+                    TableNumber = session.Table?.TableNumber ?? "Unknown",
+                    StartTime = session.StartTime,
+                    EndTime = endTime,
+                    HourlyRate = session.Table?.HourlyRate ?? 0,
+                    Hours = hours,
+                    TotalAmount = session.Amount,
+                    PaymentMethod = session.PaymentMethod ?? "Cash",
+                    Cash = session.Cash,
+                    Change = session.Change,
+                    WifiPassword = wifiPassword,
+                    BusinessName = "Sunny Side Up Work + Study",
+                    BusinessAddress = "Your Business Address",
+                    BusinessContact = "Contact: 09XX-XXX-XXXX"
+                };
+                
+                var success = await _printerService.PrintReceiptAsync(receipt);
+                
+                if (success)
+                {
+                    return Ok(ApiResponse<bool>.SuccessResponse(true, "Receipt printed successfully"));
+                }
+                else
+                {
+                    return Ok(ApiResponse<bool>.ErrorResponse("Failed to print receipt"));
+                }
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<bool>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpGet("sessions/{sessionId}/receipt-preview")]
+        [Authorize]
+        public async Task<ActionResult<byte[]>> PreviewReceipt(Guid sessionId)
+        {
+            try
+            {
+                var session = await _context.TableSessions
+                    .Include(s => s.User)
+                    .Include(s => s.Table)
+                    .FirstOrDefaultAsync(s => s.Id == sessionId);
+                
+                if (session == null)
+                {
+                    return NotFound();
+                }
+                
+                // Calculate hours
+                var endTime = session.EndTime ?? DateTime.UtcNow;
+                var duration = endTime - session.StartTime;
+                var hours = Math.Ceiling(duration.TotalHours);
+                
+                var receipt = new ReceiptDto
+                {
+                    TransactionId = session.Id.ToString(),
+                    TransactionDate = session.CreatedAt,
+                    CustomerName = session.User?.Name ?? "Guest",
+                    TableNumber = session.Table?.TableNumber ?? "Unknown",
+                    StartTime = session.StartTime,
+                    EndTime = endTime,
+                    HourlyRate = session.Table?.HourlyRate ?? 0,
+                    Hours = hours,
+                    TotalAmount = session.Amount,
+                    PaymentMethod = session.PaymentMethod ?? "Cash",
+                    Cash = session.Cash,
+                    Change = session.Change,
+                    WifiPassword = "password1234",
+                    BusinessName = "Sunny Side Up Work + Study",
+                    BusinessAddress = "Your Business Address",
+                    BusinessContact = "Contact: 09XX-XXX-XXXX"
+                };
+                
+                var receiptData = await _printerService.GenerateReceiptAsync(receipt);
+                
+                return File(receiptData, "application/octet-stream", $"receipt_{sessionId}.bin");
+            }
+            catch (Exception ex)
+            {
+                return BadRequest();
             }
         }
     }

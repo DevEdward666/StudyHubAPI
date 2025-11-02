@@ -68,6 +68,8 @@ builder.Services.AddScoped<Study_Hub.Services.Interfaces.IPromoService, Study_Hu
 builder.Services.AddScoped<Study_Hub.Services.Interfaces.IGlobalSettingsService, Study_Hub.Service.GlobalSettingsService>();
 // Rate service registration
 builder.Services.AddScoped<Study_Hub.Services.Interfaces.IRateService, Study_Hub.Services.RateService>();
+// Thermal Printer service registration
+builder.Services.AddScoped<Study_Hub.Service.Interface.IThermalPrinterService, Study_Hub.Service.ThermalPrinterService>();
 
 // WiFi Access System Services
 builder.Services.AddScoped<Study_Hub.Service.Interface.IWifiService, Study_Hub.Service.WifiService>();
