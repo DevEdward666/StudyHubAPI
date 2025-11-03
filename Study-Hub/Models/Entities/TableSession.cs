@@ -1,4 +1,4 @@
-﻿﻿﻿using Study_Hub.Models.Entities;
+﻿﻿﻿﻿using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -48,6 +48,9 @@ namespace Study_Hub.Models.Entities
         [Column("change", TypeName = "decimal(10,2)")]
         public decimal? Change { get; set; }
 
+        [Column("rate_id")]
+        public Guid? RateId { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }
 
@@ -60,5 +63,8 @@ namespace Study_Hub.Models.Entities
 
         [ForeignKey("TableId")]
         public virtual StudyTable Table { get; set; }
+
+        [ForeignKey("RateId")]
+        public virtual Rate? Rate { get; set; }
     }
 }

@@ -5,7 +5,7 @@ namespace Study_Hub.Service.Interface
     public interface IThermalPrinterService
     {
         Task<byte[]> GenerateReceiptAsync(ReceiptDto receipt);
-        Task<bool> PrintReceiptAsync(ReceiptDto receipt);
+        Task<bool> PrintReceiptAsync(ReceiptDto receipt, bool waitForCompletion = true, int timeoutMs = 15000);
     }
 }
 

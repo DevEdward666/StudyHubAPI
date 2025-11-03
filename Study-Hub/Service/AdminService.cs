@@ -55,6 +55,7 @@ namespace Study_Hub.Services
             var transactions = await _context.TableSessions
                 .Include(ts => ts.User)
                 .Include(ts => ts.Table)
+                .Include(ts => ts.Rate)
                 .Where(ts => ts.Status == "active")
                 .OrderByDescending(ts => ts.CreatedAt)
                 .ToListAsync();
@@ -67,6 +68,7 @@ namespace Study_Hub.Services
             var sessions = await _context.TableSessions
                 .Include(ts => ts.Table)
                 .Include(ts => ts.User)
+                .Include(ts => ts.Rate)
                 .Where(ts => ts.Status != "active")
                 .OrderByDescending(ts => ts.CreatedAt)
                 .ToListAsync();
@@ -562,6 +564,13 @@ namespace Study_Hub.Services
                 PaymentMethod = transaction.PaymentMethod,
                 Cash = transaction.Cash,
                 Change = transaction.Change,
+                Rates = new RateDto()
+                {
+                    Id = transaction.Rate != null ? transaction.Rate.Id : Guid.Empty,
+                    Hours = transaction.Rate != null ? transaction.Rate.Hours : 0,
+                    Description = transaction.Rate != null ? transaction.Rate.Description : "",
+                    CreatedAt = transaction.Rate != null ? transaction.Rate.CreatedAt : DateTime.MinValue
+                },
                 CreatedAt = transaction.CreatedAt
             };
         }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿using Microsoft.EntityFrameworkCore;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
@@ -94,6 +94,7 @@ namespace StudyHubApi.Services
                     PaymentMethod = request.PaymentMethod,
                     Cash = request.Cash,
                     Change = request.Change,
+                    RateId = request.RateId,
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
@@ -120,6 +121,8 @@ namespace StudyHubApi.Services
                 
                 var session = await _context.TableSessions
                     .Include(ts => ts.Table)
+                    .Include(ts => ts.User)
+                    .Include(ts => ts.Rate)
                     .FirstOrDefaultAsync(ts => ts.Id == sessionId);
 
                 if (session == null)
@@ -158,10 +161,21 @@ namespace StudyHubApi.Services
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
+                // Return complete receipt information
                 return new EndSessionResponseDto
                 {
+                    SessionId = session.Id,
                     Amount = creditsUsed,
-                    Duration = (long)duration.TotalMilliseconds
+                    Duration = (long)duration.TotalMilliseconds,
+                    Hours = hoursUsed,
+                    Rate = session.Rate?.Price ?? session.Table.HourlyRate,
+                    TableNumber = session.Table.TableNumber,
+                    CustomerName = session.User.Name ?? session.User.Email,
+                    StartTime = session.StartTime,
+                    EndTime = endTime,
+                    PaymentMethod = session.PaymentMethod,
+                    Cash = session.Cash,
+                    Change = session.Change
                 };
             }
             catch
@@ -239,6 +253,7 @@ namespace StudyHubApi.Services
                     EndTime = newEndTime,
                     Amount = currentSession.Amount, // Transfer the same amount
                     Status = "active",
+                    RateId = currentSession.RateId, // Transfer the rate reference
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };

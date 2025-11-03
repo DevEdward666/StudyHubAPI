@@ -137,63 +137,112 @@ namespace Study_Hub.Service
             return commands.ToArray();
         }
 
-        public async Task<bool> PrintReceiptAsync(ReceiptDto receipt)
+        public async Task<bool> PrintReceiptAsync(ReceiptDto receipt, bool waitForCompletion = true, int timeoutMs = 15000)
         {
             try
             {
                 var receiptData = await GenerateReceiptAsync(receipt);
                 
-                // Fire-and-forget Bluetooth printing to avoid blocking the API response
-                // This prevents frontend timeout and Bluetooth disconnection issues
-                _ = Task.Run(async () =>
+                if (waitForCompletion)
                 {
-                    try
+                    // Server/USB mode: Wait for actual print completion
+                    Console.WriteLine("🖨️ Print job started (waiting for completion)...");
+                    Console.WriteLine($"📊 Receipt data: {receiptData.Length} bytes");
+                    Console.WriteLine($"⏱️  Timeout: {timeoutMs}ms");
+                    
+                    var printTask = TryPrintAsync(receiptData);
+                    var timeoutTask = Task.Delay(timeoutMs);
+                    var completedTask = await Task.WhenAny(printTask, timeoutTask);
+
+                    if (completedTask == printTask)
                     {
-                        Console.WriteLine("Starting print job...");
-                        var printSuccess = await TryPrintAsync(receiptData);
-                        
+                        var printSuccess = await printTask;
                         if (printSuccess)
                         {
                             Console.WriteLine("✅ Receipt printed successfully");
+                            return true;
                         }
                         else
                         {
-                            // Fallback: Save to file for testing/debugging
-                            Console.WriteLine("⚠️ Printing failed or printer not available. Saving to file...");
-                            var filePath = Path.Combine(Path.GetTempPath(), $"receipt_{DateTime.Now:yyyyMMddHHmmss}.bin");
-                            await File.WriteAllBytesAsync(filePath, receiptData);
-                            
-                            Console.WriteLine($"📄 Receipt saved to: {filePath}");
-                            Console.WriteLine("💡 To enable printing:");
-                            Console.WriteLine("   - USB: Connect printer via USB cable");
-                            Console.WriteLine("   - Bluetooth: Pair RPP02N-1175 in System Settings");
+                            Console.WriteLine("❌ Print attempt failed");
+                            Console.WriteLine("⚠️ Saving receipt to file as fallback...");
+                            try
+                            {
+                                var filePath = Path.Combine(Path.GetTempPath(), $"receipt_{DateTime.Now:yyyyMMddHHmmss}.bin");
+                                await File.WriteAllBytesAsync(filePath, receiptData);
+                                Console.WriteLine($"📄 Receipt saved to: {filePath}");
+                                Console.WriteLine("💡 Check printer connection and permissions");
+                            }
+                            catch (Exception saveEx)
+                            {
+                                Console.WriteLine($"❌ Failed to save receipt fallback: {saveEx.Message}");
+                            }
+                            return false;
                         }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Console.WriteLine($"❌ Background print error: {ex.Message}");
-                        
-                        // Save to file as last resort
+                        Console.WriteLine($"⏳ Print timed out after {timeoutMs}ms");
+                        Console.WriteLine("⚠️ Saving receipt to file as fallback...");
                         try
                         {
                             var filePath = Path.Combine(Path.GetTempPath(), $"receipt_{DateTime.Now:yyyyMMddHHmmss}.bin");
                             await File.WriteAllBytesAsync(filePath, receiptData);
-                            Console.WriteLine($"📄 Receipt saved to file after error: {filePath}");
+                            Console.WriteLine($"📄 Receipt saved to: {filePath}");
                         }
                         catch (Exception saveEx)
                         {
-                            Console.WriteLine($"❌ Failed to save receipt: {saveEx.Message}");
+                            Console.WriteLine($"❌ Failed to save receipt after timeout: {saveEx.Message}");
                         }
+                        return false;
                     }
-                });
-                
-                // Return immediately to prevent frontend timeout
-                Console.WriteLine("🖨️ Print job queued successfully");
-                return true;
+                }
+                else
+                {
+                    // Non-blocking mode: Fire-and-forget (for Bluetooth/development)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            Console.WriteLine("Starting background print job...");
+                            var printSuccess = await TryPrintAsync(receiptData);
+                            
+                            if (printSuccess)
+                            {
+                                Console.WriteLine("✅ Receipt printed successfully (background)");
+                            }
+                            else
+                            {
+                                Console.WriteLine("⚠️ Background printing failed. Saving to file...");
+                                var filePath = Path.Combine(Path.GetTempPath(), $"receipt_{DateTime.Now:yyyyMMddHHmmss}.bin");
+                                await File.WriteAllBytesAsync(filePath, receiptData);
+                                Console.WriteLine($"📄 Receipt saved to: {filePath}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"❌ Background print error: {ex.Message}");
+                            try
+                            {
+                                var filePath = Path.Combine(Path.GetTempPath(), $"receipt_{DateTime.Now:yyyyMMddHHmmss}.bin");
+                                await File.WriteAllBytesAsync(filePath, receiptData);
+                                Console.WriteLine($"📄 Receipt saved to file after error: {filePath}");
+                            }
+                            catch (Exception saveEx)
+                            {
+                                Console.WriteLine($"❌ Failed to save receipt: {saveEx.Message}");
+                            }
+                        }
+                    });
+                    
+                    Console.WriteLine("🖨️ Print job queued successfully (background)");
+                    return true;
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error queuing print job: {ex.Message}");
+                Console.WriteLine($"❌ Error in PrintReceiptAsync: {ex.Message}");
+                Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
                 return false;
             }
         }
@@ -202,12 +251,32 @@ namespace Study_Hub.Service
         {
             try
             {
-                // Priority 1: Try CUPS printer (macOS Printers & Scanners)
+                Console.WriteLine("🔍 Starting printer detection...");
+                Console.WriteLine($"📊 Data size: {receiptData.Length} bytes");
+                Console.WriteLine($"💻 OS: {Environment.OSVersion.Platform}");
+                Console.WriteLine($"👤 User: {Environment.UserName}");
+                Console.WriteLine($"📁 Temp path: {Path.GetTempPath()}");
+                
+                // Priority 1: Try CUPS printer (macOS/Linux Printers & Scanners)
                 var cupsPrinterName = FindCupsPrinter();
                 if (!string.IsNullOrEmpty(cupsPrinterName))
                 {
                     Console.WriteLine($"✅ Found CUPS printer: {cupsPrinterName}");
-                    return await PrintViaCups(cupsPrinterName, receiptData);
+                    Console.WriteLine($"🖨️  Attempting CUPS print...");
+                    var success = await PrintViaCups(cupsPrinterName, receiptData);
+                    if (success)
+                    {
+                        Console.WriteLine($"✅ CUPS print completed successfully");
+                        return true;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ CUPS print failed, trying serial port...");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"ℹ️  No CUPS printer found, checking serial ports...");
                 }
                 
                 // Priority 2: Try to find printer via serial port (USB or Bluetooth)
@@ -215,23 +284,43 @@ namespace Study_Hub.Service
                 
                 if (!string.IsNullOrEmpty(printerPort))
                 {
-                    return await SendToSerialPortAsync(printerPort, receiptData);
+                    Console.WriteLine($"✅ Found serial port: {printerPort}");
+                    Console.WriteLine($"🖨️  Attempting serial port print...");
+                    var success = await SendToSerialPortAsync(printerPort, receiptData);
+                    if (success)
+                    {
+                        Console.WriteLine($"✅ Serial port print completed successfully");
+                        return true;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"❌ Serial port print failed");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"ℹ️  No serial port found");
                 }
                 
                 // Priority 3: If serial port not found on Windows, try direct Bluetooth
                 #if WINDOWS
+                Console.WriteLine($"🔵 Attempting Windows Bluetooth...");
                 return await SendViaBluetoothAsync(receiptData);
                 #else
-                Console.WriteLine("❌ Printer not found. Available connection methods:");
-                Console.WriteLine("1. CUPS: Add printer in System Settings → Printers & Scanners");
-                Console.WriteLine("2. USB: Connect printer via USB cable (for direct serial)");
-                Console.WriteLine("3. Bluetooth: Pair RPP02N-1175 via System Bluetooth Settings");
+                Console.WriteLine("❌ No printer found. Troubleshooting steps:");
+                Console.WriteLine("1. CUPS: Run 'lpstat -p' to see available printers");
+                Console.WriteLine("2. USB: Run 'ls -la /dev/cu.* | grep -i usb' to see USB devices");
+                Console.WriteLine("3. USB: Check permissions with 'ls -la /dev/cu.usbserial*'");
+                Console.WriteLine("4. Server: Ensure printer is connected and powered on");
+                Console.WriteLine("5. Server: Check if user has permissions to access /dev ports");
                 return false;
                 #endif
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Printer connection error: {ex.Message}");
+                Console.WriteLine($"❌ Printer connection error: {ex.GetType().Name}");
+                Console.WriteLine($"❌ Message: {ex.Message}");
+                Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
                 return false;
             }
         }
@@ -374,38 +463,78 @@ namespace Study_Hub.Service
         {
             try
             {
-                Console.WriteLine("🔍 Searching for printer (USB or Bluetooth)...");
+                Console.WriteLine("🔍 Searching for printer ports...");
                 
                 if (Directory.Exists("/dev/"))
                 {
                     // macOS/Linux: List all available serial ports
+                    Console.WriteLine("📋 Scanning /dev/ for serial ports...");
+                    
                     var allPorts = Directory.GetFiles("/dev/")
                         .Where(f => f.Contains("cu.") || f.Contains("tty."))
                         .OrderBy(f => f)
                         .ToList();
+                    
+                    Console.WriteLine($"📊 Found {allPorts.Count} potential serial ports");
                     
                     if (allPorts.Any())
                     {
                         Console.WriteLine($"📋 Available serial ports:");
                         foreach (var port in allPorts)
                         {
-                            Console.WriteLine($"   - {port}");
+                            try
+                            {
+                                var fileInfo = new FileInfo(port);
+                                var permissions = fileInfo.UnixFileMode;
+                                Console.WriteLine($"   - {port} (permissions: {permissions})");
+                            }
+                            catch
+                            {
+                                Console.WriteLine($"   - {port} (permissions: unknown)");
+                            }
                         }
+                    }
+                    else
+                    {
+                        Console.WriteLine("⚠️ No serial ports found in /dev/");
                     }
                     
                     // Priority 1: Look for USB serial devices (common patterns)
-                    var usbPort = allPorts.FirstOrDefault(f => 
-                        (f.Contains("usbserial", StringComparison.OrdinalIgnoreCase) ||
-                         f.Contains("usbmodem", StringComparison.OrdinalIgnoreCase) ||
-                         f.Contains("USB", StringComparison.OrdinalIgnoreCase)) &&
-                        f.Contains("cu.")
-                    );
-                    
-                    if (usbPort != null)
+                    var usbPatterns = new[] { "usbserial", "usbmodem", "USB", "usb" };
+                    foreach (var pattern in usbPatterns)
                     {
-                        Console.WriteLine($"✅ Found USB printer port: {usbPort}");
-                        Console.WriteLine($"🔌 Connection type: USB");
-                        return usbPort;
+                        var usbPort = allPorts.FirstOrDefault(f => 
+                            f.Contains(pattern, StringComparison.OrdinalIgnoreCase) &&
+                            f.Contains("cu.")
+                        );
+                        
+                        if (usbPort != null)
+                        {
+                            Console.WriteLine($"✅ Found USB printer port: {usbPort}");
+                            Console.WriteLine($"🔌 Connection type: USB");
+                            Console.WriteLine($"📝 Pattern matched: {pattern}");
+                            
+                            // Check if port is accessible
+                            try
+                            {
+                                var fileInfo = new FileInfo(usbPort);
+                                if (fileInfo.Exists)
+                                {
+                                    Console.WriteLine($"✅ Port exists and is accessible");
+                                    return usbPort;
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"⚠️ Port exists but may not be accessible");
+                                    return usbPort;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"⚠️ Port access check failed: {ex.Message}");
+                                return usbPort; // Try anyway
+                            }
+                        }
                     }
                     
                     // Priority 2: Look for RPP02N Bluetooth specifically
@@ -463,6 +592,7 @@ namespace Study_Hub.Service
                 else
                 {
                     // Windows: Check COM ports (both USB and Bluetooth)
+                    Console.WriteLine("📋 Scanning Windows COM ports...");
                     var ports = SerialPort.GetPortNames();
                     if (ports.Any())
                     {
@@ -477,15 +607,26 @@ namespace Study_Hub.Service
                             return selectedPort;
                         }
                     }
+                    else
+                    {
+                        Console.WriteLine("⚠️ No COM ports found");
+                    }
                 }
 
                 Console.WriteLine("❌ No printer port found");
-                Console.WriteLine("💡 Make sure printer is connected via USB or paired via Bluetooth");
+                Console.WriteLine("💡 Troubleshooting:");
+                Console.WriteLine("   1. Check if printer is connected and powered on");
+                Console.WriteLine("   2. Run 'ls -la /dev/cu.* | grep -i usb' to see USB devices");
+                Console.WriteLine("   3. Run 'ls -la /dev/tty.* | grep -i usb' to see tty devices");
+                Console.WriteLine("   4. Check permissions: current user may need access to /dev ports");
+                Console.WriteLine("   5. Try: sudo chmod 666 /dev/cu.usbserial* (if USB device found)");
                 return null;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error finding printer port: {ex.Message}");
+                Console.WriteLine($"❌ Error finding printer port: {ex.GetType().Name}");
+                Console.WriteLine($"❌ Message: {ex.Message}");
+                Console.WriteLine($"❌ Stack trace: {ex.StackTrace}");
                 return null;
             }
         }

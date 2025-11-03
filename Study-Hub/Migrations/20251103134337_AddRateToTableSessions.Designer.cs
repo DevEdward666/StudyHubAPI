@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Study_Hub.Data;
@@ -11,9 +12,11 @@ using Study_Hub.Data;
 namespace Study_Hub.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251103134337_AddRateToTableSessions")]
+    partial class AddRateToTableSessions
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -952,9 +955,9 @@ namespace Study_Hub.Migrations
                         .HasColumnType("text")
                         .HasColumnName("payment_method");
 
-                    b.Property<Guid?>("RateId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("rate_id");
+                    b.Property<decimal?>("Rate")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("rate");
 
                     b.Property<DateTime>("StartTime")
                         .HasColumnType("timestamp with time zone")
@@ -980,8 +983,6 @@ namespace Study_Hub.Migrations
                         .HasColumnName("user_id");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("RateId");
 
                     b.HasIndex("TableId");
 
@@ -1287,10 +1288,6 @@ namespace Study_Hub.Migrations
 
             modelBuilder.Entity("Study_Hub.Models.Entities.TableSession", b =>
                 {
-                    b.HasOne("Study_Hub.Models.Entities.Rate", "Rate")
-                        .WithMany()
-                        .HasForeignKey("RateId");
-
                     b.HasOne("Study_Hub.Models.Entities.StudyTable", "Table")
                         .WithMany("TableSessions")
                         .HasForeignKey("TableId")
@@ -1302,8 +1299,6 @@ namespace Study_Hub.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Rate");
 
                     b.Navigation("Table");
 

@@ -1,4 +1,4 @@
-﻿﻿using Study_Hub.Models.DTOs;
+﻿﻿﻿using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -32,6 +32,7 @@ namespace Study_Hub.Models.DTOs
         public string PaymentMethod { get; set; }
         public decimal? Cash { get; set; }
         public decimal? Change { get; set; }
+        public RateDto Rates { get; set; }
         public string TransactionId { get; set; }
         public Guid? ApprovedBy { get; set; }
         public DateTime? ApprovedAt { get; set; }
