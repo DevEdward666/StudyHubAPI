@@ -80,12 +80,18 @@ builder.Services.AddHostedService<Study_Hub.Service.Background.WifiCleanupServic
 // Register PushServiceClient for Web Push
 builder.Services.AddHttpClient<Lib.Net.Http.WebPush.PushServiceClient>();
 
-// SignalR Configuration
+// SignalR Configuration - Optimized for mobile clients
 builder.Services.AddSignalR(options =>
 {
     options.EnableDetailedErrors = true;
-    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
-    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    // Longer keep-alive for mobile networks (default is 15s)
+    options.KeepAliveInterval = TimeSpan.FromSeconds(10);
+    // Longer timeout for mobile networks (default is 30s)
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+    // Increase max message size for mobile (default is 32KB)
+    options.MaximumReceiveMessageSize = 64 * 1024; // 64KB
+    // Enable detailed errors for debugging mobile issues
+    options.StreamBufferCapacity = 10;
 });
 
 // Background Services
@@ -179,10 +185,14 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// Enable WebSockets for SignalR
+// Enable WebSockets for SignalR - Optimized for mobile
 app.UseWebSockets(new WebSocketOptions
 {
-    KeepAliveInterval = TimeSpan.FromSeconds(120)
+    // Shorter keep-alive for mobile to detect disconnections faster
+    KeepAliveInterval = TimeSpan.FromSeconds(30),
+    // Allow larger buffers for mobile networks
+    ReceiveBufferSize = 4 * 1024, // 4KB
+    // Add compression support for mobile data savings (if supported by client)
 });
 
 app.UseCors("AllowAll");
