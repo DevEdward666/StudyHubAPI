@@ -226,47 +226,23 @@ namespace StudyHubApi.Services
                 oldTable.CurrentUserId = null;
                 oldTable.UpdatedAt = DateTime.UtcNow;
 
-                // End the current session
-                // currentSession.EndTime = DateTime.UtcNow;
-                currentSession.Status = "completed";
-                currentSession.UpdatedAt = DateTime.UtcNow;
-
                 // Occupy the new table
                 newTable.IsOccupied = true;
                 newTable.CurrentUserId = userId;
                 newTable.UpdatedAt = DateTime.UtcNow;
 
-                // Calculate remaining time from original session
-                var originalEndTime = currentSession.EndTime;
-                var now = DateTime.UtcNow;
-                var remainingTime = originalEndTime.HasValue ? (originalEndTime.Value - now).TotalHours : 0;
+                // Move the active session to the new table (do NOT end it)
+                currentSession.TableId = request.NewTableId;
+                currentSession.UpdatedAt = DateTime.UtcNow;
 
-                // Create new session on the new table with remaining time
-                var newStartTime = currentSession.StartTime;
-                var newEndTime = currentSession.EndTime;
-
-                var newSession = new TableSession
-                {
-                    UserId = userId,
-                    TableId = request.NewTableId,
-                    StartTime = newStartTime,
-                    EndTime = newEndTime,
-                    Amount = currentSession.Amount, // Transfer the same amount
-                    Status = "active",
-                    RateId = currentSession.RateId, // Transfer the rate reference
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-
-                _context.TableSessions.Add(newSession);
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
                 return new ChangeTableResponseDto
                 {
                     Success = true,
-                    Message = $"Successfully changed from {oldTable.TableNumber} to {newTable.TableNumber}",
-                    NewSessionId = newSession.Id
+                    Message = $"Successfully moved session from {oldTable.TableNumber} to {newTable.TableNumber}",
+                    NewSessionId = currentSession.Id
                 };
             }
             catch (Exception ex)

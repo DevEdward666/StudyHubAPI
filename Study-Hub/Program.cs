@@ -80,14 +80,21 @@ builder.Services.AddHostedService<Study_Hub.Service.Background.WifiCleanupServic
 // Register PushServiceClient for Web Push
 builder.Services.AddHttpClient<Lib.Net.Http.WebPush.PushServiceClient>();
 
+// SignalR Configuration
+builder.Services.AddSignalR();
+
+// Background Services
+builder.Services.AddHostedService<Study_Hub.Services.Background.SessionExpiryChecker>();
+
 // CORS Configuration
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "http://localhost:3000", "https://localhost:3000")
               .AllowAnyMethod()
-              .AllowAnyHeader();
+              .AllowAnyHeader()
+              .AllowCredentials(); // Required for SignalR
     });
 });
 
@@ -155,6 +162,9 @@ app.UseAuthorization();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
+
+// Map SignalR Hubs
+app.MapHub<Study_Hub.Hubs.NotificationHub>("/hubs/notifications");
 
 // Database Migration and Seeding
 using (var scope = app.Services.CreateScope())
