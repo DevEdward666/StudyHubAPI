@@ -81,7 +81,12 @@ builder.Services.AddHostedService<Study_Hub.Service.Background.WifiCleanupServic
 builder.Services.AddHttpClient<Lib.Net.Http.WebPush.PushServiceClient>();
 
 // SignalR Configuration
-builder.Services.AddSignalR();
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+});
 
 // Background Services
 builder.Services.AddHostedService<Study_Hub.Services.Background.SessionExpiryChecker>();
@@ -154,6 +159,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Enable WebSockets for SignalR
+app.UseWebSockets(new WebSocketOptions
+{
+    KeepAliveInterval = TimeSpan.FromSeconds(120)
+});
 
 app.UseCors("AllowAll");
 
