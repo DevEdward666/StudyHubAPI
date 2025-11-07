@@ -96,10 +96,29 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173", "http://localhost:3000", "https://localhost:3000","https://study-hub-app-nu.vercel.app","https://studyhubapi-i0o7.onrender.com")
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials(); // Required for SignalR
+        policy.SetIsOriginAllowed(origin =>
+        {
+            // Allow localhost
+            if (origin.StartsWith("http://localhost") || origin.StartsWith("https://localhost"))
+                return true;
+            
+            // Allow Vercel deployments
+            if (origin.Contains("vercel.app"))
+                return true;
+            
+            // Allow Render deployments
+            if (origin.Contains("onrender.com"))
+                return true;
+            
+            // Allow specific production domains
+            if (origin == "https://study-hub-app-nu.vercel.app")
+                return true;
+            
+            return false;
+        })
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials(); // Required for SignalR
     });
 });
 
