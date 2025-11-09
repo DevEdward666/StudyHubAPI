@@ -160,6 +160,84 @@ namespace StudyHubApi.Controllers
             }
         }
 
+        [HttpPost("sessions/start-subscription")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<Guid>>> StartSubscriptionSession([FromBody] StartSubscriptionSessionDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var sessionId = await _tableService.StartSubscriptionSessionAsync(userId, request);
+                
+                // Get session details for receipt
+                var session = await _context.TableSessions
+                    .Include(s => s.User)
+                    .Include(s => s.Table)
+                    .Include(s => s.Subscription)
+                        .ThenInclude(sub => sub.Package)
+                    .FirstOrDefaultAsync(s => s.Id == sessionId);
+                
+                if (session != null && session.Subscription != null)
+                {
+                    // Prepare receipt data for subscription session
+                    var receipt = new ReceiptDto
+                    {
+                        TransactionId = session.Id.ToString(),
+                        TransactionDate = session.CreatedAt,
+                        CustomerName = session.User?.Name ?? "Guest",
+                        TableNumber = session.Table?.TableNumber ?? "Unknown",
+                        StartTime = session.StartTime,
+                        EndTime = null, // Open-ended for subscription
+                        HourlyRate = 0,
+                        Hours = 0,
+                        TotalAmount = 0,
+                        PaymentMethod = $"Subscription: {session.Subscription.Package?.Name}",
+                        Cash = null,
+                        Change = null,
+                        WifiPassword = "password1234",
+                        BusinessName = "Sunny Side Up Work + Study",
+                        BusinessAddress = "Your Business Address",
+                        BusinessContact = "Contact: 09XX-XXX-XXXX"
+                    };
+                    
+                    // Print receipt (async - don't wait for it to complete)
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            await _printerService.PrintReceiptAsync(receipt);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to print receipt: {ex.Message}");
+                        }
+                    });
+                }
+                
+                return Ok(ApiResponse<Guid>.SuccessResponse(sessionId, "Subscription session started successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<Guid>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("sessions/end-subscription")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<EndSessionResponseDto>>> EndSubscriptionSession([FromBody] Guid sessionId)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                var result = await _tableService.EndSubscriptionSessionAsync(userId, sessionId);
+                return Ok(ApiResponse<EndSessionResponseDto>.SuccessResponse(result, "Subscription session ended successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<EndSessionResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
         [HttpPost("sessions/{sessionId}/print-receipt")]
         [Authorize]
         public async Task<ActionResult<ApiResponse<bool>>> PrintReceipt(Guid sessionId, [FromBody] PrintReceiptRequest? request = null)

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿using Study_Hub.Models.Entities;
+﻿﻿﻿﻿﻿﻿using Study_Hub.Models.Entities;
 using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 
@@ -24,8 +24,11 @@ namespace Study_Hub.Models.DTOs
     {
         public Guid Id { get; set; }
         public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public string CustomerName { get; set; }
+        public DateTime? EndTime { get; set; } // Nullable for subscription sessions
+        public string? CustomerName { get; set; }
+        public bool IsSubscriptionBased { get; set; } // Flag for subscription sessions
+        public Guid? SubscriptionId { get; set; } // Link to subscription
+        public UserSubscriptionDto? Subscription { get; set; } // Subscription details
     }
 
     public class StartSessionRequestDto

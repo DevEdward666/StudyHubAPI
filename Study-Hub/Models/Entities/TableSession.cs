@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using Study_Hub.Models.Entities;
+﻿﻿﻿﻿﻿using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -51,6 +51,15 @@ namespace Study_Hub.Models.Entities
         [Column("rate_id")]
         public Guid? RateId { get; set; }
 
+        [Column("subscription_id")]
+        public Guid? SubscriptionId { get; set; } // Link to user subscription if using package
+
+        [Column("hours_consumed", TypeName = "decimal(10,2)")]
+        public decimal? HoursConsumed { get; set; } // Actual hours used from subscription
+
+        [Column("is_subscription_based")]
+        public bool IsSubscriptionBased { get; set; } = false; // True if using subscription package
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }
 
@@ -66,5 +75,8 @@ namespace Study_Hub.Models.Entities
 
         [ForeignKey("RateId")]
         public virtual Rate? Rate { get; set; }
+
+        [ForeignKey("SubscriptionId")]
+        public virtual UserSubscription? Subscription { get; set; }
     }
 }

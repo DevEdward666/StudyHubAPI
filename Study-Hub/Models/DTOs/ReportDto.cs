@@ -16,9 +16,6 @@ namespace Study_Hub.Models.DTOs
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public TransactionSummaryDto Summary { get; set; }
-        public List<TransactionByStatusDto> ByStatus { get; set; }
-        public List<TransactionByPaymentMethodDto> ByPaymentMethod { get; set; }
-        public List<DailyTransactionDto> DailyBreakdown { get; set; }
         public List<TopUserDto> TopUsers { get; set; }
     }
 
@@ -26,42 +23,7 @@ namespace Study_Hub.Models.DTOs
     {
         public int TotalTransactions { get; set; }
         public decimal TotalAmount { get; set; }
-        public decimal TotalCost { get; set; }
-        public decimal AverageTransactionAmount { get; set; }
-        public int ApprovedCount { get; set; }
-        public int PendingCount { get; set; }
-        public int RejectedCount { get; set; }
-        public decimal ApprovedAmount { get; set; }
-        public decimal PendingAmount { get; set; }
-        public decimal RejectedAmount { get; set; }
-    }
-
-    public class TransactionByStatusDto
-    {
-        public TransactionStatus Status { get; set; }
-        public int Count { get; set; }
-        public decimal TotalAmount { get; set; }
-        public decimal TotalCost { get; set; }
-        public decimal Percentage { get; set; }
-    }
-
-    public class TransactionByPaymentMethodDto
-    {
-        public string PaymentMethod { get; set; }
-        public int Count { get; set; }
-        public decimal TotalAmount { get; set; }
-        public decimal AverageAmount { get; set; }
-    }
-
-    public class DailyTransactionDto
-    {
-        public DateTime Date { get; set; }
-        public int Count { get; set; }
-        public decimal TotalAmount { get; set; }
-        public decimal TotalCost { get; set; }
-        public int ApprovedCount { get; set; }
-        public int PendingCount { get; set; }
-        public int RejectedCount { get; set; }
+        public decimal? AverageAmount { get; set; }
     }
 
     public class TopUserDto
@@ -71,7 +33,6 @@ namespace Study_Hub.Models.DTOs
         public string? UserName { get; set; }
         public int TransactionCount { get; set; }
         public decimal TotalAmount { get; set; }
-        public decimal TotalCost { get; set; }
     }
 
     public class GetReportRequestDto

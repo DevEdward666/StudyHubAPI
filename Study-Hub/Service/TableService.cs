@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
@@ -20,6 +20,9 @@ namespace StudyHubApi.Services
             var tables = await _context.StudyTables
                 .Include(t => t.TableSessions.Where(s => s.Status.ToLower() == "active"))
                     .ThenInclude(s => s.User)
+                .Include(t => t.TableSessions.Where(s => s.Status.ToLower() == "active"))
+                    .ThenInclude(s => s.Subscription)
+                        .ThenInclude(sub => sub.Package)
                 .ToListAsync();
 
 
@@ -31,17 +34,32 @@ namespace StudyHubApi.Services
         {
             var dto = MapToStudyTableDto(table); // Your existing mapping
     
-            // Add active session data 
-           var activeSession = table.TableSessions?.FirstOrDefault(s => s.Status.ToLower() == "active");
+            // Add active session data with subscription support
+            var activeSession = table.TableSessions?.FirstOrDefault(s => s.Status.ToLower() == "active");
             if (activeSession != null)
             {
                 dto.CurrentSession = new CurrentSessionDto
                 {
                     Id = activeSession.Id,
                     StartTime = activeSession.StartTime,
-                    EndTime = activeSession.EndTime ?? activeSession.StartTime,
-                    CustomerName = activeSession.User.Name ?? "Guest",
-                    // Use EndTime which is StartTime + hours
+                    EndTime = activeSession.EndTime, // Keep null for subscription sessions
+                    CustomerName = activeSession.User?.Name ?? "Guest",
+                    IsSubscriptionBased = activeSession.IsSubscriptionBased,
+                    SubscriptionId = activeSession.SubscriptionId,
+                    Subscription = activeSession.Subscription != null ? new UserSubscriptionDto
+                    {
+                        Id = activeSession.Subscription.Id,
+                        UserId = activeSession.Subscription.UserId,
+                        PackageId = activeSession.Subscription.PackageId,
+                        PackageName = activeSession.Subscription.Package?.Name,
+                        TotalHours = activeSession.Subscription.TotalHours,
+                        RemainingHours = activeSession.Subscription.RemainingHours,
+                        HoursUsed = activeSession.Subscription.HoursUsed,
+                        Status = activeSession.Subscription.Status,
+                        PurchaseDate = activeSession.Subscription.PurchaseDate,
+                        ActivationDate = activeSession.Subscription.ActivationDate,
+                        ExpiryDate = activeSession.Subscription.ExpiryDate
+                    } : null
                 };
             }
     
@@ -123,6 +141,8 @@ namespace StudyHubApi.Services
                     .Include(ts => ts.Table)
                     .Include(ts => ts.User)
                     .Include(ts => ts.Rate)
+                    .Include(ts => ts.Subscription)
+                        .ThenInclude(s => s.Package)
                     .FirstOrDefaultAsync(ts => ts.Id == sessionId);
 
                 if (session == null)
@@ -131,10 +151,62 @@ namespace StudyHubApi.Services
                 if (session.Status != "active")
                     throw new InvalidOperationException("Session is not active");
 
-                var endTime = DateTime.UtcNow;
-                var duration = endTime - session.StartTime;
-                var hoursUsed = Math.Ceiling(duration.TotalHours);
-                var creditsUsed = (decimal)(hoursUsed * (double)session.Table.HourlyRate);
+                // If this is a subscription session, use EndSubscriptionSessionAsync logic
+                if (session.IsSubscriptionBased && session.Subscription != null)
+                {
+                    var endTime = DateTime.UtcNow;
+                    var duration = endTime - session.StartTime;
+                    var hoursUsed = (decimal)duration.TotalHours; // Precise hours for subscription
+
+                    // Update subscription hours
+                    var subscription = session.Subscription;
+                    subscription.HoursUsed += hoursUsed;
+                    subscription.RemainingHours = Math.Max(0, subscription.TotalHours - subscription.HoursUsed);
+                    subscription.UpdatedAt = DateTime.UtcNow;
+
+                    // Check if subscription is depleted
+                    if (subscription.RemainingHours <= 0)
+                    {
+                        subscription.Status = "Expired";
+                    }
+
+                    // Update session
+                    session.EndTime = endTime;
+                    session.HoursConsumed = hoursUsed;
+                    session.Amount = 0; // No additional charge for subscription
+                    session.Status = "completed";
+                    session.UpdatedAt = DateTime.UtcNow;
+
+                    // Free up table
+                    session.Table.IsOccupied = false;
+                    session.Table.CurrentUserId = null;
+                    session.Table.UpdatedAt = DateTime.UtcNow;
+
+                    await _context.SaveChangesAsync();
+                    await transaction.CommitAsync();
+
+                    return new EndSessionResponseDto
+                    {
+                        SessionId = session.Id,
+                        Amount = 0,
+                        Duration = (long)duration.TotalMilliseconds,
+                        Hours = (double)hoursUsed,
+                        Rate = 0,
+                        TableNumber = session.Table.TableNumber,
+                        CustomerName = session.User?.Name ?? session.User?.Email ?? "Guest",
+                        StartTime = session.StartTime,
+                        EndTime = endTime,
+                        PaymentMethod = $"Subscription: {subscription.Package?.Name}",
+                        Cash = null,
+                        Change = null
+                    };
+                }
+
+                // For non-subscription sessions, use ceiling for billing
+                var nonSubEndTime = DateTime.UtcNow;
+                var nonSubDuration = nonSubEndTime - session.StartTime;
+                var nonSubHoursUsed = Math.Ceiling(nonSubDuration.TotalHours);
+                var creditsUsed = (decimal)(nonSubHoursUsed * (double)session.Table.HourlyRate);
 
                 // Update user credits
                 var userCredits = await _context.UserCredit
@@ -148,7 +220,7 @@ namespace StudyHubApi.Services
                 }
 
                 // Update session
-                session.EndTime = endTime;
+                session.EndTime = nonSubEndTime;
                 session.Amount = creditsUsed;
                 session.Status = "completed";
                 session.UpdatedAt = DateTime.UtcNow;
@@ -166,13 +238,13 @@ namespace StudyHubApi.Services
                 {
                     SessionId = session.Id,
                     Amount = creditsUsed,
-                    Duration = (long)duration.TotalMilliseconds,
-                    Hours = hoursUsed,
+                    Duration = (long)nonSubDuration.TotalMilliseconds,
+                    Hours = nonSubHoursUsed,
                     Rate = session.Rate?.Price ?? session.Table.HourlyRate,
                     TableNumber = session.Table.TableNumber,
                     CustomerName = session.User.Name ?? session.User.Email,
                     StartTime = session.StartTime,
-                    EndTime = endTime,
+                    EndTime = nonSubEndTime,
                     PaymentMethod = session.PaymentMethod,
                     Cash = session.Cash,
                     Change = session.Change
@@ -249,6 +321,160 @@ namespace StudyHubApi.Services
             {
                 await transaction.RollbackAsync();
                 throw new InvalidOperationException($"Failed to change table: {ex.Message}");
+            }
+        }
+
+        public async Task<Guid> StartSubscriptionSessionAsync(Guid userId, StartSubscriptionSessionDto request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Verify table exists and is available
+                var table = await _context.StudyTables.FindAsync(request.TableId);
+                if (table == null)
+                    throw new InvalidOperationException("Table not found");
+
+                if (table.IsOccupied)
+                    throw new InvalidOperationException("Table is already occupied");
+
+                // Get and validate subscription
+                var subscription = await _context.UserSubscriptions
+                    .Include(s => s.Package)
+                    .FirstOrDefaultAsync(s => s.Id == request.SubscriptionId);
+
+                if (subscription == null)
+                    throw new InvalidOperationException("Subscription not found");
+
+                if (subscription.Status != "Active")
+                    throw new InvalidOperationException("Subscription is not active");
+
+                if (subscription.RemainingHours <= 0)
+                    throw new InvalidOperationException("No remaining hours in subscription");
+
+                // Determine user (allow admin to assign)
+                var targetUserId = !string.IsNullOrEmpty(request.UserId) && Guid.TryParse(request.UserId, out var parsedUserId)
+                    ? parsedUserId
+                    : userId;
+
+                // Verify subscription belongs to target user
+                if (subscription.UserId != targetUserId)
+                    throw new InvalidOperationException("Subscription does not belong to this user");
+
+                // Mark table as occupied
+                table.IsOccupied = true;
+                table.CurrentUserId = targetUserId;
+                table.UpdatedAt = DateTime.UtcNow;
+
+                // Create session - no end time, will be calculated when ended
+                var startTime = DateTime.UtcNow;
+
+                // Activate subscription on first use
+                if (!subscription.ActivationDate.HasValue)
+                {
+                    subscription.ActivationDate = startTime;
+                }
+
+                var session = new TableSession
+                {
+                    UserId = targetUserId,
+                    TableId = request.TableId,
+                    StartTime = startTime,
+                    EndTime = null, // Will be set when session ends
+                    Amount = 0, // Will be calculated on end
+                    Status = "active",
+                    IsSubscriptionBased = true,
+                    SubscriptionId = request.SubscriptionId,
+                    HoursConsumed = 0,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.TableSessions.Add(session);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return session.Id;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<EndSessionResponseDto> EndSubscriptionSessionAsync(Guid userId, Guid sessionId)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var session = await _context.TableSessions
+                    .Include(ts => ts.Table)
+                    .Include(ts => ts.User)
+                    .Include(ts => ts.Subscription)
+                        .ThenInclude(s => s.Package)
+                    .FirstOrDefaultAsync(ts => ts.Id == sessionId);
+
+                if (session == null)
+                    throw new InvalidOperationException("Session not found");
+
+                if (session.Status != "active")
+                    throw new InvalidOperationException("Session is not active");
+
+                if (!session.IsSubscriptionBased || session.Subscription == null)
+                    throw new InvalidOperationException("This is not a subscription-based session");
+
+                var endTime = DateTime.UtcNow;
+                var duration = endTime - session.StartTime;
+                var hoursUsed = (decimal)duration.TotalHours; // Use actual hours, not ceiling
+
+                // Update subscription hours
+                var subscription = session.Subscription;
+                subscription.HoursUsed += hoursUsed;
+                subscription.RemainingHours = Math.Max(0, subscription.TotalHours - subscription.HoursUsed);
+                subscription.UpdatedAt = DateTime.UtcNow;
+
+                // Check if subscription is depleted
+                if (subscription.RemainingHours <= 0)
+                {
+                    subscription.Status = "Expired";
+                }
+
+                // Update session
+                session.EndTime = endTime;
+                session.HoursConsumed = hoursUsed;
+                session.Amount = 0; // No additional charge for subscription
+                session.Status = "completed";
+                session.UpdatedAt = DateTime.UtcNow;
+
+                // Free up table
+                session.Table.IsOccupied = false;
+                session.Table.CurrentUserId = null;
+                session.Table.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new EndSessionResponseDto
+                {
+                    SessionId = session.Id,
+                    Amount = 0,
+                    Duration = (long)duration.TotalMilliseconds,
+                    Hours = Math.Ceiling((double)hoursUsed),
+                    Rate = 0,
+                    TableNumber = session.Table.TableNumber,
+                    CustomerName = session.User.Name ?? session.User.Email,
+                    StartTime = session.StartTime,
+                    EndTime = endTime,
+                    PaymentMethod = "Subscription",
+                    Cash = null,
+                    Change = null
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
             }
         }
 

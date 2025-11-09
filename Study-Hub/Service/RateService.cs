@@ -55,15 +55,17 @@ namespace Study_Hub.Services
         {
             // Check if rate for this duration already exists
             var existingRate = await _context.Rates
-                .FirstOrDefaultAsync(r => r.Hours == request.Hours);
+                .FirstOrDefaultAsync(r => r.Hours == request.Hours && r.DurationType == request.DurationType && r.DurationValue == request.DurationValue);
 
             if (existingRate != null)
-                throw new InvalidOperationException($"A rate for {request.Hours} hours already exists");
+                throw new InvalidOperationException($"A rate for {request.DurationValue} {request.DurationType} ({request.Hours} hours) already exists");
 
             var rate = new Rate
             {
                 Id = Guid.NewGuid(),
                 Hours = request.Hours,
+                DurationType = request.DurationType,
+                DurationValue = request.DurationValue,
                 Price = request.Price,
                 Description = request.Description,
                 IsActive = request.IsActive,
@@ -85,14 +87,16 @@ namespace Study_Hub.Services
             if (rate == null)
                 throw new InvalidOperationException("Rate not found");
 
-            // Check if another rate exists with the same hours
+            // Check if another rate exists with the same duration
             var existingRate = await _context.Rates
-                .FirstOrDefaultAsync(r => r.Hours == request.Hours && r.Id != request.Id);
+                .FirstOrDefaultAsync(r => r.Hours == request.Hours && r.DurationType == request.DurationType && r.DurationValue == request.DurationValue && r.Id != request.Id);
 
             if (existingRate != null)
-                throw new InvalidOperationException($"Another rate for {request.Hours} hours already exists");
+                throw new InvalidOperationException($"Another rate for {request.DurationValue} {request.DurationType} ({request.Hours} hours) already exists");
 
             rate.Hours = request.Hours;
+            rate.DurationType = request.DurationType;
+            rate.DurationValue = request.DurationValue;
             rate.Price = request.Price;
             rate.Description = request.Description;
             rate.IsActive = request.IsActive;
@@ -122,6 +126,8 @@ namespace Study_Hub.Services
             {
                 Id = rate.Id,
                 Hours = rate.Hours,
+                DurationType = rate.DurationType,
+                DurationValue = rate.DurationValue,
                 Price = rate.Price,
                 Description = rate.Description,
                 IsActive = rate.IsActive,

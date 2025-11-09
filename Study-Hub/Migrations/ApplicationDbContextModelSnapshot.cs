@@ -827,6 +827,16 @@ namespace Study_Hub.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("display_order");
 
+                    b.Property<string>("DurationType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("duration_type");
+
+                    b.Property<int>("DurationValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_value");
+
                     b.Property<int>("Hours")
                         .HasColumnType("integer")
                         .HasColumnName("hours");
@@ -918,6 +928,67 @@ namespace Study_Hub.Migrations
                     b.ToTable("study_tables");
                 });
 
+            modelBuilder.Entity("Study_Hub.Models.Entities.SubscriptionPackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("display_order");
+
+                    b.Property<int>("DurationValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_value");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PackageType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("package_type");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("price");
+
+                    b.Property<decimal>("TotalHours")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_hours");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("subscription_packages");
+                });
+
             modelBuilder.Entity("Study_Hub.Models.Entities.TableSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -948,6 +1019,14 @@ namespace Study_Hub.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("end_time");
 
+                    b.Property<decimal?>("HoursConsumed")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("hours_consumed");
+
+                    b.Property<bool>("IsSubscriptionBased")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_subscription_based");
+
                     b.Property<string>("PaymentMethod")
                         .HasColumnType("text")
                         .HasColumnName("payment_method");
@@ -964,6 +1043,10 @@ namespace Study_Hub.Migrations
                         .IsRequired()
                         .HasColumnType("text")
                         .HasColumnName("status");
+
+                    b.Property<Guid?>("SubscriptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subscription_id");
 
                     b.Property<Guid>("TableId")
                         .HasColumnType("uuid")
@@ -982,6 +1065,8 @@ namespace Study_Hub.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("RateId");
+
+                    b.HasIndex("SubscriptionId");
 
                     b.HasIndex("TableId");
 
@@ -1098,6 +1183,91 @@ namespace Study_Hub.Migrations
                         .IsUnique();
 
                     b.ToTable("user_credits");
+                });
+
+            modelBuilder.Entity("Study_Hub.Models.Entities.UserSubscription", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ActivationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("activation_date");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expiry_date");
+
+                    b.Property<decimal>("HoursUsed")
+                        .HasColumnType("numeric")
+                        .HasColumnName("hours_used");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("package_id");
+
+                    b.Property<string>("PaymentMethod")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("payment_method");
+
+                    b.Property<decimal>("PurchaseAmount")
+                        .HasColumnType("decimal(10,2)")
+                        .HasColumnName("purchase_amount");
+
+                    b.Property<DateTime>("PurchaseDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("purchase_date");
+
+                    b.Property<decimal>("RemainingHours")
+                        .HasColumnType("numeric")
+                        .HasColumnName("remaining_hours");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("status");
+
+                    b.Property<decimal>("TotalHours")
+                        .HasColumnType("numeric")
+                        .HasColumnName("total_hours");
+
+                    b.Property<string>("TransactionReference")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("transaction_reference");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PackageId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("user_subscriptions");
                 });
 
             modelBuilder.Entity("Study_Hub.Models.Entities.WifiAccess", b =>
@@ -1291,6 +1461,10 @@ namespace Study_Hub.Migrations
                         .WithMany()
                         .HasForeignKey("RateId");
 
+                    b.HasOne("Study_Hub.Models.Entities.UserSubscription", "Subscription")
+                        .WithMany("Sessions")
+                        .HasForeignKey("SubscriptionId");
+
                     b.HasOne("Study_Hub.Models.Entities.StudyTable", "Table")
                         .WithMany("TableSessions")
                         .HasForeignKey("TableId")
@@ -1304,6 +1478,8 @@ namespace Study_Hub.Migrations
                         .IsRequired();
 
                     b.Navigation("Rate");
+
+                    b.Navigation("Subscription");
 
                     b.Navigation("Table");
 
@@ -1321,6 +1497,25 @@ namespace Study_Hub.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Study_Hub.Models.Entities.UserSubscription", b =>
+                {
+                    b.HasOne("Study_Hub.Models.Entities.SubscriptionPackage", "Package")
+                        .WithMany("UserSubscriptions")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Study_Hub.Models.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Package");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Study_Hub.Models.Entities.Promo", b =>
                 {
                     b.Navigation("PromoUsages");
@@ -1329,6 +1524,11 @@ namespace Study_Hub.Migrations
             modelBuilder.Entity("Study_Hub.Models.Entities.StudyTable", b =>
                 {
                     b.Navigation("TableSessions");
+                });
+
+            modelBuilder.Entity("Study_Hub.Models.Entities.SubscriptionPackage", b =>
+                {
+                    b.Navigation("UserSubscriptions");
                 });
 
             modelBuilder.Entity("Study_Hub.Models.Entities.User", b =>
@@ -1346,6 +1546,11 @@ namespace Study_Hub.Migrations
                     b.Navigation("TableSessions");
 
                     b.Navigation("UserCredits");
+                });
+
+            modelBuilder.Entity("Study_Hub.Models.Entities.UserSubscription", b =>
+                {
+                    b.Navigation("Sessions");
                 });
 #pragma warning restore 612, 618
         }

@@ -71,8 +71,16 @@ namespace Study_Hub.Service
             
             // Session Details (compact)
             commands.AddRange(PrintRow("Start:", receipt.StartTime.ToString("hh:mm tt")));
-            commands.AddRange(PrintRow("End:", receipt.EndTime.ToString("hh:mm tt")));
-            commands.AddRange(PrintRow("Duration:", $"{receipt.Hours:F2} hrs"));
+            if (receipt.EndTime.HasValue)
+            {
+                commands.AddRange(PrintRow("End:", receipt.EndTime.Value.ToString("hh:mm tt")));
+                commands.AddRange(PrintRow("Duration:", $"{receipt.Hours:F2} hrs"));
+            }
+            else
+            {
+                commands.AddRange(PrintRow("End:", "Ongoing"));
+                commands.AddRange(PrintRow("Type:", "Subscription"));
+            }
             commands.AddRange(PrintLine("-", 32));
             
             // Payment Details (compact with ₱) - calculate rate dynamically

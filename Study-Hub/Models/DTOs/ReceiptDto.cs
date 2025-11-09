@@ -7,7 +7,7 @@ namespace Study_Hub.Models.DTOs
         public string CustomerName { get; set; } = string.Empty;
         public string TableNumber { get; set; } = string.Empty;
         public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
+        public DateTime? EndTime { get; set; } // Nullable for open-ended subscription sessions
         public decimal HourlyRate { get; set; }
         public double Hours { get; set; }
         public decimal TotalAmount { get; set; }

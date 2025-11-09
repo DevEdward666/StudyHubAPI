@@ -50,45 +50,93 @@ namespace Study_Hub.Services.Background
 
             var now = DateTime.UtcNow;
             
-            var expiredSessions = await context.TableSessions
+            // Get all active subscription sessions
+            var activeSessions = await context.TableSessions
                 .Include(s => s.Table)
                 .Include(s => s.User)
                 .Include(s => s.Rate)
-                .Where(s => s.Status == "active" && s.EndTime.HasValue && s.EndTime <= now)
+                .Include(s => s.Subscription)
+                    .ThenInclude(sub => sub.Package)
+                .Where(s => s.Status == "active" && s.SubscriptionId != null)
                 .ToListAsync(ct);
 
-            if (!expiredSessions.Any())
+            if (!activeSessions.Any())
             {
-                _logger.LogInformation("No expired sessions found at {Time}", now);
+                _logger.LogInformation("No active subscription sessions found at {Time}", now);
                 return;
             }
 
-            _logger.LogInformation("Found {Count} expired sessions to process", expiredSessions.Count);
+            var sessionsToEnd = new List<TableSession>();
 
-            foreach (var session in expiredSessions)
+            // Check each subscription session
+            foreach (var session in activeSessions)
+            {
+                if (session.Subscription == null)
+                    continue;
+
+                // Calculate hours used in THIS session so far
+                var sessionElapsedHours = (decimal)(now - session.StartTime).TotalHours;
+                
+                // Calculate effective remaining hours after accounting for current session
+                var effectiveRemainingHours = session.Subscription.RemainingHours - sessionElapsedHours;
+
+                _logger.LogDebug(
+                    "Session {SessionId}: RemainingHours={Remaining}h, SessionElapsed={Elapsed}h, Effective={Effective}h",
+                    session.Id,
+                    session.Subscription.RemainingHours,
+                    sessionElapsedHours,
+                    effectiveRemainingHours);
+
+                // If effective remaining hours <= 0, session should end
+                if (effectiveRemainingHours <= 0)
+                {
+                    sessionsToEnd.Add(session);
+                    _logger.LogInformation(
+                        "Subscription session {SessionId} will be ended. User: {UserName}, Remaining: {Remaining}h, Elapsed: {Elapsed}h, Effective: {Effective}h",
+                        session.Id,
+                        session.User?.Name ?? "Unknown",
+                        session.Subscription.RemainingHours,
+                        sessionElapsedHours,
+                        effectiveRemainingHours);
+                }
+            }
+
+            if (!sessionsToEnd.Any())
+            {
+                _logger.LogInformation("No sessions need to be ended at {Time}", now);
+                return;
+            }
+
+            _logger.LogInformation("Found {Count} sessions to end", sessionsToEnd.Count);
+
+            foreach (var session in sessionsToEnd)
             {
                 try
                 {
-                    // Compute amount similar to EndTableSessionAsync
-                    var duration = session.EndTime.Value - session.StartTime;
-                    var hoursUsed = Math.Ceiling(duration.TotalHours);
-                    var tableRate = session.Rate?.Price ?? session.Table.HourlyRate;
-                    var creditsUsed = (decimal)(hoursUsed * (double)tableRate);
-
-                    // Update user credits
-                    var userCredits = await context.UserCredit
-                        .FirstOrDefaultAsync(uc => uc.UserId == session.UserId, ct);
+                    // Calculate actual hours used in this session
+                    var sessionDuration = (now - session.StartTime).TotalHours;
+                    var hoursUsedInSession = (decimal)sessionDuration;
                     
-                    if (userCredits != null)
+                    _logger.LogInformation(
+                        "Ending subscription session {SessionId}. Hours used in session: {Hours}h, Remaining before update: {Remaining}h",
+                        session.Id,
+                        hoursUsedInSession,
+                        session.Subscription?.RemainingHours ?? 0);
+
+                    // Update subscription hours
+                    if (session.Subscription != null)
                     {
-                        userCredits.Balance = Math.Max(0, userCredits.Balance - creditsUsed);
-                        userCredits.TotalSpent += creditsUsed;
-                        userCredits.UpdatedAt = DateTime.UtcNow;
+                        session.Subscription.HoursUsed += hoursUsedInSession;
+                        session.Subscription.RemainingHours = Math.Max(0, session.Subscription.TotalHours - session.Subscription.HoursUsed);
+                        session.Subscription.Status = "Expired"; // Mark as expired since hours are depleted
+                        session.Subscription.UpdatedAt = DateTime.UtcNow;
                     }
 
                     // Update session
-                    session.Amount = creditsUsed;
+                    session.HoursConsumed = hoursUsedInSession;
+                    session.Amount = 0; // No charge for subscription sessions
                     session.Status = "completed";
+                    session.EndTime = now;
                     session.UpdatedAt = DateTime.UtcNow;
 
                     // Free table
@@ -103,9 +151,9 @@ namespace Study_Hub.Services.Background
                     var notification = new Notification
                     {
                         Id = Guid.NewGuid(),
-                        UserId = session.UserId, // Link to the user who had the session
-                        Title = "Session Expired",
-                        Message = $"Session ended for table {session.Table?.TableNumber ?? session.TableId.ToString()}",
+                        UserId = session.UserId,
+                        Title = "Subscription Session Ended - Hours Depleted",
+                        Message = $"Subscription session ended for table {session.Table?.TableNumber ?? session.TableId.ToString()} - User ran out of hours",
                         Type = NotificationType.Session,
                         Priority = NotificationPriority.High,
                         IsRead = false,
@@ -115,8 +163,11 @@ namespace Study_Hub.Services.Background
                             TableId = session.TableId,
                             TableNumber = session.Table?.TableNumber,
                             UserName = session.User?.Name,
-                            Duration = duration.TotalHours,
-                            Amount = creditsUsed
+                            Duration = hoursUsedInSession,
+                            Amount = 0m,
+                            IsSubscription = true,
+                            SubscriptionId = session.SubscriptionId,
+                            RemainingHours = session.Subscription?.RemainingHours ?? 0m
                         }),
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
@@ -127,10 +178,11 @@ namespace Study_Hub.Services.Background
                     await context.SaveChangesAsync(ct);
 
                     _logger.LogInformation(
-                        "Session {SessionId} expired for table {TableNumber}. User: {UserId}", 
+                        "Subscription session {SessionId} ended for table {TableNumber}. User: {UserName}, Final remaining hours: {Remaining}h", 
                         session.Id, 
                         session.Table?.TableNumber, 
-                        session.UserId);
+                        session.User?.Name ?? session.User?.Email ?? "Unknown",
+                        session.Subscription?.RemainingHours ?? 0);
 
                     // Notify connected admins via SignalR
                     await hubContext.Clients.Group("admins").SendAsync("SessionEnded", new
@@ -141,8 +193,8 @@ namespace Study_Hub.Services.Background
                         TableNumber = session.Table?.TableNumber,
                         UserName = session.User?.Name ?? session.User?.Email ?? "Guest",
                         Message = notification.Message,
-                        Duration = duration.TotalHours,
-                        Amount = creditsUsed,
+                        Duration = (double)hoursUsedInSession,
+                        Amount = 0m,
                         CreatedAt = notification.CreatedAt
                     }, ct);
                 }

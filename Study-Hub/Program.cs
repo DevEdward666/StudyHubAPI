@@ -57,6 +57,7 @@ builder.Services.AddAuthentication(x =>
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ITableService, TableService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPremiseService, PremiseService>();
 builder.Services.AddScoped<Study_Hub.Service.Interface.IPushNotificationService, Study_Hub.Service.PushNotificationService>();
@@ -105,7 +106,17 @@ builder.Services.AddCors(options =>
         policy.SetIsOriginAllowed(origin =>
         {
             // Allow localhost
-            if (origin.StartsWith("http://localhost") || origin.StartsWith("https://localhost"))
+            if (origin.StartsWith("http://localhost") 
+                || origin.StartsWith("https://localhost"))
+                return true;
+            
+            // Allow DevTunnels (without trailing slash)
+            if (origin.StartsWith("https://3qrbqpcx-5173.asse.devtunnels.ms") 
+                || origin.StartsWith("https://3qrbqpcx-5212.asse.devtunnels.ms"))
+                return true;
+            
+            // Allow any devtunnels domain
+            if (origin.Contains(".devtunnels.ms"))
                 return true;
             
             // Allow Vercel deployments
