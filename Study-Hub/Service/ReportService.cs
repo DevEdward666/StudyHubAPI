@@ -100,7 +100,7 @@ namespace Study_Hub.Service
             {
                 TotalTransactions = totalTransactions,
                 TotalAmount = totalAmount,
-                AverageAmount = totalTransactions > 0 ? totalAmount / totalTransactions : null
+                AverageAmount = totalTransactions > 0 ? totalAmount / totalTransactions : 0
             };
         }
 
@@ -137,10 +137,7 @@ namespace Study_Hub.Service
             csv.AppendLine("Metric,Value");
             csv.AppendLine($"Total Transactions,{report.Summary.TotalTransactions}");
             csv.AppendLine($"Total Amount,{report.Summary.TotalAmount:F2}");
-            if (report.Summary.AverageAmount.HasValue)
-            {
-                csv.AppendLine($"Average Amount,{report.Summary.AverageAmount.Value:F2}");
-            }
+            csv.AppendLine($"Average Amount,{report.Summary.AverageAmount:F2}");
             csv.AppendLine();
 
             // Top Users

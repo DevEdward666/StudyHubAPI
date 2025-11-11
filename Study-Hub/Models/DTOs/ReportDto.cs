@@ -23,7 +23,7 @@ namespace Study_Hub.Models.DTOs
     {
         public int TotalTransactions { get; set; }
         public decimal TotalAmount { get; set; }
-        public decimal? AverageAmount { get; set; }
+        public decimal AverageAmount { get; set; }
     }
 
     public class TopUserDto

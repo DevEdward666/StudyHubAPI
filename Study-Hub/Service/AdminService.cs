@@ -371,7 +371,18 @@ namespace Study_Hub.Services
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                var authAccount = new AuthAccount
+                {
+                    UserId = newUser.Id,
+                    Provider = "password",
+                    ProviderId = request.Email,
+                    Secret = HashPassword(request.Password),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
 
+                _context.AuthAccounts.Add(authAccount);
+                await _context.SaveChangesAsync();
                 return new CreateUserResponseDto
                 {
                     UserId = newUser.Id,
@@ -390,7 +401,10 @@ namespace Study_Hub.Services
                 throw;
             }
         }
-
+        private static string HashPassword(string password)
+        {
+            return BCrypt.Net.BCrypt.HashPassword(password);
+        }
         public async Task<UpdateUserResponseDto> UpdateUserAsync(UpdateUserRequestDto request)
         {
             using var transaction = await _context.Database.BeginTransactionAsync();
