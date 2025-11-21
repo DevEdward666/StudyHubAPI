@@ -185,7 +185,7 @@ namespace Study_Hub.Services.Background
                         session.Subscription?.RemainingHours ?? 0);
 
                     // Notify connected admins via SignalR
-                    await hubContext.Clients.Group("admins").SendAsync("SessionEnded", new
+                    var signalRPayload = new
                     {
                         Id = notification.Id,
                         SessionId = session.Id,
@@ -196,7 +196,16 @@ namespace Study_Hub.Services.Background
                         Duration = (double)hoursUsedInSession,
                         Amount = 0m,
                         CreatedAt = notification.CreatedAt
-                    }, ct);
+                    };
+
+                    _logger.LogInformation(
+                        "📡 Sending SessionEnded notification to 'admins' group - Table {TableNumber}, User: {UserName}", 
+                        session.Table?.TableNumber, 
+                        session.User?.Name ?? session.User?.Email ?? "Guest");
+
+                    await hubContext.Clients.Group("admins").SendAsync("SessionEnded", signalRPayload, ct);
+                    
+                    _logger.LogInformation("✅ SessionEnded notification sent successfully");
                 }
                 catch (Exception ex)
                 {
