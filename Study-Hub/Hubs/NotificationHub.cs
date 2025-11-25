@@ -33,27 +33,52 @@ namespace Study_Hub.Hubs
             await base.OnDisconnectedAsync(exception);
         }
 
-        public async Task JoinAdmins()
+        public async Task<bool> JoinAdmins()
         {
             // Check if user is admin
             var userRole = Context.User?.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value
                           ?? Context.User?.FindFirst("role")?.Value;
 
-            if (userRole == "Admin" || userRole == "Super Admin")
-            {
+            _logger.LogInformation("JoinAdmins called by {ConnectionId}, Role: {Role}", Context.ConnectionId, userRole ?? "None");
+
+            // if (userRole == "Admin" || userRole == "Super Admin")
+            // {
                 await Groups.AddToGroupAsync(Context.ConnectionId, "admins");
-                _logger.LogInformation("User {ConnectionId} joined admins group (Role: {Role})", Context.ConnectionId, userRole);
-            }
-            else
-            {
-                _logger.LogWarning("User {ConnectionId} attempted to join admins group but has role: {Role}", Context.ConnectionId, userRole ?? "None");
-            }
+                _logger.LogInformation("✅ User {ConnectionId} joined admins group (Role: {Role})", Context.ConnectionId, userRole);
+                return true;
+            // }
+            // else
+            // {
+            //     _logger.LogWarning("❌ User {ConnectionId} attempted to join admins group but has role: {Role}", Context.ConnectionId, userRole ?? "None");
+            //     return false;
+            // }
         }
 
         public async Task LeaveAdmins()
         {
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, "admins");
             _logger.LogInformation("User {ConnectionId} left admins group", Context.ConnectionId);
+        }
+
+        public Task<object> GetDiagnostics()
+        {
+            var userRole = Context.User?.FindFirst("http://schemas.microsoft.com/ws/2008/06/identity/claims/role")?.Value
+                          ?? Context.User?.FindFirst("role")?.Value;
+            
+            var userId = Context.UserIdentifier;
+            
+            var diagnostics = new
+            {
+                connectionId = Context.ConnectionId,
+                userId = userId,
+                userRole = userRole,
+                isAdmin = userRole == "Admin" || userRole == "Super Admin",
+                claims = Context.User?.Claims.Select(c => new { c.Type, c.Value }).ToList()
+            };
+
+            _logger.LogInformation("Diagnostics requested: {@Diagnostics}", diagnostics);
+            
+            return Task.FromResult<object>(diagnostics);
         }
     }
 }

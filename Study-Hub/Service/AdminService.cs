@@ -1,18 +1,22 @@
-﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
+﻿﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
 using Study_Hub.Services.Interfaces;
+using Study_Hub.Hubs;
 
 namespace Study_Hub.Services
 {
     public class AdminService : IAdminService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public AdminService(ApplicationDbContext context)
+        public AdminService(ApplicationDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         public async Task<bool> IsAdminAsync(Guid userId)
@@ -616,5 +620,33 @@ namespace Study_Hub.Services
                 CreatedAt = session.CreatedAt
             };
         }
+
+        public async Task<string> SendTestNotificationAsync()
+        {
+            try
+            {
+                var testNotification = new
+                {
+                    id = Guid.NewGuid().ToString(),
+                    sessionId = Guid.NewGuid().ToString(),
+                    tableId = Guid.NewGuid().ToString(),
+                    tableNumber = "TEST-01",
+                    userName = "Test User",
+                    message = "This is a test notification from SignalR",
+                    duration = 2.5,
+                    amount = 125.50m,
+                    createdAt = DateTime.UtcNow.ToString("o")
+                };
+
+                await _hubContext.Clients.Group("admins").SendAsync("SessionEnded", testNotification);
+                
+                return "Test notification sent successfully to all admins";
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to send test notification: {ex.Message}");
+            }
+        }
     }
+
 }

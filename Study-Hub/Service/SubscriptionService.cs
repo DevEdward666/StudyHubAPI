@@ -146,6 +146,31 @@ namespace StudyHubApi.Services
                 if (package == null || !package.IsActive)
                     throw new InvalidOperationException("Package not found or not active");
 
+                // Calculate expiry date based on package type
+                DateTime? expiryDate = null;
+                var purchaseDate = DateTime.UtcNow;
+                
+                switch (package.PackageType.ToLower())
+                {
+                    case "daily":
+                        expiryDate = purchaseDate.AddDays(package.DurationValue);
+                        break;
+                    case "weekly":
+                        expiryDate = purchaseDate.AddDays(package.DurationValue * 7);
+                        break;
+                    case "monthly":
+                        expiryDate = purchaseDate.AddMonths(package.DurationValue);
+                        break;
+                    case "hourly":
+                        // Hourly packages don't have expiry date, only hours limit
+                        expiryDate = null;
+                        break;
+                    default:
+                        // Default: no expiry date for unknown types
+                        expiryDate = null;
+                        break;
+                }
+
                 var subscription = new UserSubscription
                 {
                     Id = Guid.NewGuid(),
@@ -154,7 +179,8 @@ namespace StudyHubApi.Services
                     TotalHours = package.TotalHours,
                     RemainingHours = package.TotalHours,
                     HoursUsed = 0,
-                    PurchaseDate = DateTime.UtcNow,
+                    PurchaseDate = purchaseDate,
+                    ExpiryDate = expiryDate,
                     Status = "Active",
                     PurchaseAmount = package.Price,
                     PaymentMethod = dto.PaymentMethod,
@@ -196,6 +222,31 @@ namespace StudyHubApi.Services
                 if (user == null)
                     throw new InvalidOperationException("User not found");
 
+                // Calculate expiry date based on package type
+                DateTime? expiryDate = null;
+                var purchaseDate = DateTime.UtcNow;
+                
+                switch (package.PackageType.ToLower())
+                {
+                    case "daily":
+                        expiryDate = purchaseDate.AddDays(package.DurationValue);
+                        break;
+                    case "weekly":
+                        expiryDate = purchaseDate.AddDays(package.DurationValue * 7);
+                        break;
+                    case "monthly":
+                        expiryDate = purchaseDate.AddMonths(package.DurationValue);
+                        break;
+                    case "hourly":
+                        // Hourly packages don't have expiry date, only hours limit
+                        expiryDate = null;
+                        break;
+                    default:
+                        // Default: no expiry date for unknown types
+                        expiryDate = null;
+                        break;
+                }
+
                 var subscription = new UserSubscription
                 {
                     Id = Guid.NewGuid(),
@@ -204,7 +255,8 @@ namespace StudyHubApi.Services
                     TotalHours = package.TotalHours,
                     RemainingHours = package.TotalHours,
                     HoursUsed = 0,
-                    PurchaseDate = DateTime.UtcNow,
+                    PurchaseDate = purchaseDate,
+                    ExpiryDate = expiryDate,
                     Status = "Active",
                     PurchaseAmount = package.Price,
                     PaymentMethod = dto.PaymentMethod,

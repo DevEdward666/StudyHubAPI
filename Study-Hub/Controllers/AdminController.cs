@@ -839,6 +839,24 @@ namespace StudyHubApi.Controllers
                 return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
             }
         }
+
+        [HttpPost("test-signalr")]
+        public async Task<ActionResult<ApiResponse<string>>> TestSignalR()
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _adminService.SendTestNotificationAsync();
+                return Ok(ApiResponse<string>.SuccessResponse(result));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<string>.ErrorResponse(ex.Message));
+            }
+        }
     }
 }
 

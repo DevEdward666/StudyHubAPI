@@ -74,30 +74,63 @@ namespace Study_Hub.Services.Background
                 if (session.Subscription == null)
                     continue;
 
+                bool shouldEndSession = false;
+                string endReason = "";
+
                 // Calculate hours used in THIS session so far
                 var sessionElapsedHours = (decimal)(now - session.StartTime).TotalHours;
                 
                 // Calculate effective remaining hours after accounting for current session
                 var effectiveRemainingHours = session.Subscription.RemainingHours - sessionElapsedHours;
 
-                _logger.LogDebug(
-                    "Session {SessionId}: RemainingHours={Remaining}h, SessionElapsed={Elapsed}h, Effective={Effective}h",
-                    session.Id,
-                    session.Subscription.RemainingHours,
-                    sessionElapsedHours,
-                    effectiveRemainingHours);
-
-                // If effective remaining hours <= 0, session should end
+                // Check 1: Hours consumed (existing logic)
                 if (effectiveRemainingHours <= 0)
                 {
-                    sessionsToEnd.Add(session);
+                    shouldEndSession = true;
+                    endReason = "Hours depleted";
+                    
                     _logger.LogInformation(
-                        "Subscription session {SessionId} will be ended. User: {UserName}, Remaining: {Remaining}h, Elapsed: {Elapsed}h, Effective: {Effective}h",
+                        "Session {SessionId} - Hours depleted. Remaining: {Remaining}h, Elapsed: {Elapsed}h, Effective: {Effective}h",
                         session.Id,
-                        session.User?.Name ?? "Unknown",
                         session.Subscription.RemainingHours,
                         sessionElapsedHours,
                         effectiveRemainingHours);
+                }
+
+                // Check 2: Expiry date reached (for monthly/weekly/daily packages)
+                if (session.Subscription.ExpiryDate.HasValue && now >= session.Subscription.ExpiryDate.Value)
+                {
+                    shouldEndSession = true;
+                    endReason = shouldEndSession && endReason != "" 
+                        ? "Hours depleted & Subscription expired" 
+                        : "Subscription period expired";
+                    
+                    _logger.LogInformation(
+                        "Session {SessionId} - Subscription expired. ExpiryDate: {ExpiryDate}, Current: {Now}",
+                        session.Id,
+                        session.Subscription.ExpiryDate.Value,
+                        now);
+                }
+
+                _logger.LogDebug(
+                    "Session {SessionId}: RemainingHours={Remaining}h, SessionElapsed={Elapsed}h, Effective={Effective}h, ExpiryDate={Expiry}, ShouldEnd={ShouldEnd}, Reason={Reason}",
+                    session.Id,
+                    session.Subscription.RemainingHours,
+                    sessionElapsedHours,
+                    effectiveRemainingHours,
+                    session.Subscription.ExpiryDate?.ToString("yyyy-MM-dd HH:mm:ss") ?? "None",
+                    shouldEndSession,
+                    endReason);
+
+                // End session if either condition is met
+                if (shouldEndSession)
+                {
+                    sessionsToEnd.Add(session);
+                    _logger.LogInformation(
+                        "Subscription session {SessionId} will be ended. User: {UserName}, Reason: {Reason}",
+                        session.Id,
+                        session.User?.Name ?? "Unknown",
+                        endReason);
                 }
             }
 
@@ -117,18 +150,54 @@ namespace Study_Hub.Services.Background
                     var sessionDuration = (now - session.StartTime).TotalHours;
                     var hoursUsedInSession = (decimal)sessionDuration;
                     
+                    // Determine end reason for this specific session
+                    var sessionElapsedHours = (decimal)(now - session.StartTime).TotalHours;
+                    var effectiveRemainingHours = session.Subscription!.RemainingHours - sessionElapsedHours;
+                    var hoursExpired = effectiveRemainingHours <= 0;
+                    var dateExpired = session.Subscription.ExpiryDate.HasValue && now >= session.Subscription.ExpiryDate.Value;
+                    
+                    string endReason = "";
+                    string notificationTitle = "";
+                    string notificationMessage = "";
+                    
+                    if (hoursExpired && dateExpired)
+                    {
+                        endReason = "Hours depleted & Subscription expired";
+                        notificationTitle = "Subscription Session Ended";
+                        notificationMessage = $"Subscription session ended for table {session.Table?.TableNumber ?? session.TableId.ToString()} - Both hours depleted and subscription period expired";
+                    }
+                    else if (hoursExpired)
+                    {
+                        endReason = "Hours depleted";
+                        notificationTitle = "Subscription Session Ended - Hours Depleted";
+                        notificationMessage = $"Subscription session ended for table {session.Table?.TableNumber ?? session.TableId.ToString()} - User ran out of hours";
+                    }
+                    else if (dateExpired)
+                    {
+                        endReason = "Subscription period expired";
+                        notificationTitle = "Subscription Session Ended - Period Expired";
+                        notificationMessage = $"Subscription session ended for table {session.Table?.TableNumber ?? session.TableId.ToString()} - Subscription period has expired on {session.Subscription.ExpiryDate.Value:MMM dd, yyyy hh:mm tt}";
+                    }
+                    
                     _logger.LogInformation(
-                        "Ending subscription session {SessionId}. Hours used in session: {Hours}h, Remaining before update: {Remaining}h",
+                        "Ending subscription session {SessionId}. Hours used in session: {Hours}h, Remaining before update: {Remaining}h, Reason: {Reason}",
                         session.Id,
                         hoursUsedInSession,
-                        session.Subscription?.RemainingHours ?? 0);
+                        session.Subscription?.RemainingHours ?? 0,
+                        endReason);
 
                     // Update subscription hours
                     if (session.Subscription != null)
                     {
                         session.Subscription.HoursUsed += hoursUsedInSession;
                         session.Subscription.RemainingHours = Math.Max(0, session.Subscription.TotalHours - session.Subscription.HoursUsed);
-                        session.Subscription.Status = "Expired"; // Mark as expired since hours are depleted
+                        
+                        // Only mark as expired if either hours depleted or date expired
+                        if (hoursExpired || dateExpired)
+                        {
+                            session.Subscription.Status = "Expired";
+                        }
+                        
                         session.Subscription.UpdatedAt = DateTime.UtcNow;
                     }
 
@@ -152,8 +221,8 @@ namespace Study_Hub.Services.Background
                     {
                         Id = Guid.NewGuid(),
                         UserId = session.UserId,
-                        Title = "Subscription Session Ended - Hours Depleted",
-                        Message = $"Subscription session ended for table {session.Table?.TableNumber ?? session.TableId.ToString()} - User ran out of hours",
+                        Title = notificationTitle,
+                        Message = notificationMessage,
                         Type = NotificationType.Session,
                         Priority = NotificationPriority.High,
                         IsRead = false,
@@ -167,7 +236,9 @@ namespace Study_Hub.Services.Background
                             Amount = 0m,
                             IsSubscription = true,
                             SubscriptionId = session.SubscriptionId,
-                            RemainingHours = session.Subscription?.RemainingHours ?? 0m
+                            RemainingHours = session.Subscription?.RemainingHours ?? 0m,
+                            EndReason = endReason,
+                            ExpiryDate = session.Subscription?.ExpiryDate
                         }),
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
