@@ -237,5 +237,130 @@ namespace Study_Hub.Controllers
                 return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
             }
         }
+
+        /// <summary>
+        /// Get formal daily sales report
+        /// </summary>
+        [HttpGet("sales/daily")]
+        public async Task<ActionResult<ApiResponse<object>>> GetDailySalesReport([FromQuery] DateTime? date = null)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var targetDate = date ?? DateTime.UtcNow.Date;
+                var salesReport = await _reportService.GetDailySalesReportAsync(targetDate);
+
+                return Ok(ApiResponse<object>.SuccessResponse(salesReport, "Daily sales report generated successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            }
+        }
+
+        /// <summary>
+        /// Export daily sales report to CSV
+        /// </summary>
+        [HttpPost("sales/export")]
+        public async Task<IActionResult> ExportSalesReport([FromBody] ExportSalesReportRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var csv = await _reportService.ExportDailySalesReportToCsvAsync(request.Date);
+                var fileName = $"daily_sales_report_{request.Date:yyyyMMdd}.csv";
+                var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+
+                return File(bytes, "text/csv", fileName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in ExportSalesReport: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return BadRequest(ApiResponse<string>.ErrorResponse($"Export failed: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Export daily sales report to PDF (HTML for print)
+        /// </summary>
+        [HttpPost("sales/export-pdf")]
+        public async Task<IActionResult> ExportSalesReportPdf([FromBody] ExportSalesReportRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var htmlBytes = await _reportService.ExportDailySalesReportToPdfAsync(request.Date);
+                var fileName = $"daily_sales_report_{request.Date:yyyyMMdd}.html";
+
+                return File(htmlBytes, "text/html", fileName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in ExportSalesReportPdf: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return BadRequest(ApiResponse<string>.ErrorResponse($"Export failed: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Export sales report to CSV for any period
+        /// </summary>
+        [HttpPost("sales/export-period")]
+        public async Task<IActionResult> ExportSalesReportPeriod([FromBody] ExportReportRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var csv = await _reportService.ExportSalesReportToCsvAsync(request.Period, request.StartDate.Value, request.EndDate.Value);
+                var fileName = $"sales_report_{request.Period}_{request.StartDate:yyyyMMdd}_to_{request.EndDate:yyyyMMdd}.csv";
+                var bytes = System.Text.Encoding.UTF8.GetBytes(csv);
+
+                return File(bytes, "text/csv", fileName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in ExportSalesReportPeriod: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return BadRequest(ApiResponse<string>.ErrorResponse($"Export failed: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Export sales report to PDF (HTML) for any period
+        /// </summary>
+        [HttpPost("sales/export-period-pdf")]
+        public async Task<IActionResult> ExportSalesReportPeriodPdf([FromBody] ExportReportRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var htmlBytes = await _reportService.ExportSalesReportToPdfAsync(request.Period, request.StartDate.Value, request.EndDate.Value);
+                var fileName = $"sales_report_{request.Period}_{request.StartDate:yyyyMMdd}_to_{request.EndDate:yyyyMMdd}.html";
+
+                return File(htmlBytes, "text/html", fileName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in ExportSalesReportPeriodPdf: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                return BadRequest(ApiResponse<string>.ErrorResponse($"Export failed: {ex.Message}"));
+            }
+        }
     }
 }

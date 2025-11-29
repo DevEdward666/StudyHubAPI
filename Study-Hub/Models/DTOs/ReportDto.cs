@@ -61,4 +61,10 @@ namespace Study_Hub.Models.DTOs
         [RegularExpression("^(json|csv)$", ErrorMessage = "Format must be 'json' or 'csv'")]
         public string Format { get; set; } = "json"; // json, csv
     }
+
+    public class ExportSalesReportRequestDto
+    {
+        [Required]
+        public DateTime Date { get; set; }
+    }
 }

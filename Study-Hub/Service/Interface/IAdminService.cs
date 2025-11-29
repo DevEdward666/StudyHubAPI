@@ -18,6 +18,7 @@ namespace Study_Hub.Services.Interfaces
         Task<ToggleUserAdminResponseDto> ToggleUserAdminAsync(Guid userId);
         Task<CreateUserResponseDto> CreateUserAsync(CreateUserRequestDto request);
         Task<UpdateUserResponseDto> UpdateUserAsync(UpdateUserRequestDto request);
+        Task<ChangeUserPasswordResponseDto> ChangeUserPasswordAsync(ChangeUserPasswordRequestDto request);
         Task<AdminAddCreditsResponseDto> AddApprovedCreditsAsync(Guid adminUserId, AdminAddCreditsRequestDto request);
         Task<QRGenerationResponseDto> GenerateTableQRAsync(Guid tableId);
         Task<string> SetupDataAsync();

@@ -1,4 +1,4 @@
-﻿﻿﻿using Study_Hub.Models.DTOs;
+﻿using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -163,6 +163,23 @@ namespace Study_Hub.Models.DTOs
         public string? CreatedAt { get; set; }
         public bool? IsAdmin { get; set; }
         public bool? HasActiveSession{ get; set; }
+    }
+
+    public class ChangeUserPasswordRequestDto
+    {
+        [Required]
+        public Guid UserId { get; set; }
+
+        [Required]
+        [MinLength(6, ErrorMessage = "Password must be at least 6 characters")]
+        public string NewPassword { get; set; }
+    }
+
+    public class ChangeUserPasswordResponseDto
+    {
+        public Guid UserId { get; set; }
+        public string Email { get; set; }
+        public string Message { get; set; }
     }
 
     public class AdminAddCreditsRequestDto{

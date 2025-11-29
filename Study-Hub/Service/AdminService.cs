@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
@@ -487,6 +487,52 @@ namespace Study_Hub.Services
                     HasActiveSession = false,
                     Id = user.Id.ToString(),
                     CreatedAt = user.CreatedAt.ToString()
+                };
+            }
+            catch
+            {
+                await transaction.RollbackAsync();
+                throw;
+            }
+        }
+
+        public async Task<ChangeUserPasswordResponseDto> ChangeUserPasswordAsync(ChangeUserPasswordRequestDto request)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Find the user
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.UserId);
+                
+                if (user == null)
+                {
+                    throw new InvalidOperationException("User not found");
+                }
+
+                // Find the user's auth account (password provider)
+                var authAccount = await _context.AuthAccounts
+                    .FirstOrDefaultAsync(a => a.UserId == request.UserId && a.Provider == "password");
+
+                if (authAccount == null)
+                {
+                    throw new InvalidOperationException("User does not have a password account");
+                }
+
+                // Hash the new password and update the auth account
+                authAccount.Secret = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+                authAccount.UpdatedAt = DateTime.UtcNow;
+                
+                // Also update the user's UpdatedAt timestamp
+                user.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return new ChangeUserPasswordResponseDto
+                {
+                    UserId = user.Id,
+                    Email = user.Email,
+                    Message = "Password changed successfully"
                 };
             }
             catch

@@ -1,4 +1,4 @@
-﻿﻿﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Study_Hub.Models.DTOs;
 using Study_Hub.Models.Entities;
@@ -290,6 +290,26 @@ namespace StudyHubApi.Controllers
             catch (Exception ex)
             {
                 return BadRequest(ApiResponse<UpdateUserResponseDto>.ErrorResponse(ex.Message));
+            }
+        }
+
+        [HttpPost("users/change-password")]
+        public async Task<ActionResult<ApiResponse<ChangeUserPasswordResponseDto>>> ChangeUserPassword(
+            [FromBody] ChangeUserPasswordRequestDto request)
+        {
+            try
+            {
+                var userId = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+                if (!await _adminService.IsAdminAsync(userId))
+                    return Forbid();
+
+                var result = await _adminService.ChangeUserPasswordAsync(request);
+                return Ok(ApiResponse<ChangeUserPasswordResponseDto>.SuccessResponse(result,
+                    "Password changed successfully"));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ApiResponse<ChangeUserPasswordResponseDto>.ErrorResponse(ex.Message));
             }
         }
 
