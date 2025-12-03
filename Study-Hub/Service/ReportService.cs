@@ -32,36 +32,84 @@ namespace Study_Hub.Service
 
         public async Task<TransactionReportDto> GetDailyReportAsync(DateTime? date = null)
         {
-            var targetDate = date.HasValue 
-                ? DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc) 
-                : DateTime.UtcNow.Date;
+            // Convert to UTC and get start of day
+            // If no date provided, use Philippine timezone (UTC+8) for "today" calculation
+            DateTime targetDate;
+            if (date.HasValue)
+            {
+                targetDate = DateTime.SpecifyKind(date.Value.Date, DateTimeKind.Utc);
+                Console.WriteLine($"[GetDailyReportAsync] Custom date provided: {date.Value:yyyy-MM-dd}, UTC target: {targetDate:yyyy-MM-dd HH:mm:ss}");
+            }
+            else
+            {
+                // Use Philippine timezone (UTC+8) for quick stats "today"
+                var philippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
+                var philippineNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, philippineTimeZone);
+                
+                Console.WriteLine($"[GetDailyReportAsync] Quick stats - UTC Now: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}, Philippine Now: {philippineNow:yyyy-MM-dd HH:mm:ss}");
+                
+                // Convert Philippine "today" back to UTC for database query
+                var philippineToday = new DateTime(philippineNow.Year, philippineNow.Month, philippineNow.Day, 0, 0, 0, DateTimeKind.Unspecified);
+                targetDate = TimeZoneInfo.ConvertTimeToUtc(philippineToday, philippineTimeZone);
+                
+                Console.WriteLine($"[GetDailyReportAsync] Philippine date: {philippineNow:yyyy-MM-dd}, UTC range start: {targetDate:yyyy-MM-dd HH:mm:ss}");
+            }
+            
             var startDate = targetDate;
-            var endDate = targetDate.AddDays(1).AddTicks(-1);
+            var endDate = targetDate.AddDays(1); // Next day at 00:00:00
+
+            Console.WriteLine($"[GetDailyReportAsync] Final query range: {startDate:yyyy-MM-dd HH:mm:ss} to {endDate:yyyy-MM-dd HH:mm:ss}");
 
             return await GenerateReportAsync(ReportPeriod.Daily, startDate, endDate);
         }
 
         public async Task<TransactionReportDto> GetWeeklyReportAsync(DateTime? weekStartDate = null)
         {
-            var targetDate = weekStartDate.HasValue 
-                ? DateTime.SpecifyKind(weekStartDate.Value.Date, DateTimeKind.Utc) 
-                : DateTime.UtcNow.Date;
+            DateTime targetDate;
+            if (weekStartDate.HasValue)
+            {
+                targetDate = DateTime.SpecifyKind(weekStartDate.Value.Date, DateTimeKind.Utc);
+            }
+            else
+            {
+                // Use Philippine timezone (UTC+8) for quick stats "this week"
+                var philippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
+                var philippineNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, philippineTimeZone);
+                
+                // Convert Philippine "today" back to UTC for database query
+                var philippineToday = new DateTime(philippineNow.Year, philippineNow.Month, philippineNow.Day, 0, 0, 0, DateTimeKind.Unspecified);
+                targetDate = TimeZoneInfo.ConvertTimeToUtc(philippineToday, philippineTimeZone);
+            }
             
             // Get the start of the week (Monday)
             var dayOfWeek = (int)targetDate.DayOfWeek;
             var startDate = targetDate.AddDays(-(dayOfWeek == 0 ? 6 : dayOfWeek - 1));
-            var endDate = startDate.AddDays(7).AddTicks(-1);
+            var endDate = startDate.AddDays(7); // Next week at 00:00:00
 
             return await GenerateReportAsync(ReportPeriod.Weekly, startDate, endDate);
         }
 
         public async Task<TransactionReportDto> GetMonthlyReportAsync(int? year = null, int? month = null)
         {
-            var targetYear = year ?? DateTime.UtcNow.Year;
-            var targetMonth = month ?? DateTime.UtcNow.Month;
+            int targetYear;
+            int targetMonth;
+            
+            if (year.HasValue && month.HasValue)
+            {
+                targetYear = year.Value;
+                targetMonth = month.Value;
+            }
+            else
+            {
+                // Use Philippine timezone (UTC+8) for quick stats "this month"
+                var philippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
+                var philippineNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, philippineTimeZone);
+                targetYear = philippineNow.Year;
+                targetMonth = philippineNow.Month;
+            }
             
             var startDate = DateTime.SpecifyKind(new DateTime(targetYear, targetMonth, 1), DateTimeKind.Utc);
-            var endDate = startDate.AddMonths(1).AddTicks(-1);
+            var endDate = startDate.AddMonths(1); // Next month at 00:00:00
 
             return await GenerateReportAsync(ReportPeriod.Monthly, startDate, endDate);
         }
@@ -69,10 +117,11 @@ namespace Study_Hub.Service
         private async Task<TransactionReportDto> GenerateReportAsync(ReportPeriod period, DateTime startDate, DateTime endDate)
         {
             // Get all user subscriptions (purchases) in the period
+            // Use direct date comparison (>= startDate and < endDate) for accurate filtering
             var subscriptions = await _context.UserSubscriptions
                 .Include(s => s.User)
                 .Include(s => s.Package)
-                .Where(s => s.PurchaseDate >= startDate && s.PurchaseDate <= endDate)
+                .Where(s => s.PurchaseDate >= startDate && s.PurchaseDate < endDate)
                 .ToListAsync();
 
             // Calculate summary
@@ -88,6 +137,78 @@ namespace Study_Hub.Service
                 EndDate = endDate,
                 Summary = summary,
                 TopUsers = topUsers
+            };
+        }
+
+        public async Task<object> GetQuickStatsAsync()
+        {
+            // Use Philippine timezone for all quick stats calculations
+            var philippineTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Asia/Manila");
+            var philippineNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, philippineTimeZone);
+            
+            Console.WriteLine($"[GetQuickStatsAsync] UTC Now: {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}, Philippine Now: {philippineNow:yyyy-MM-dd HH:mm:ss}");
+            
+            // Calculate TODAY in Philippine timezone
+            var todayPhilippine = new DateTime(philippineNow.Year, philippineNow.Month, philippineNow.Day, 0, 0, 0, DateTimeKind.Unspecified);
+            var todayStartUtc = TimeZoneInfo.ConvertTimeToUtc(todayPhilippine, philippineTimeZone);
+            var todayEndUtc = todayStartUtc.AddDays(1);
+            
+            var todayTransactions = await _context.UserSubscriptions
+                .Where(s => s.PurchaseDate >= todayStartUtc.Date && s.PurchaseDate < todayEndUtc.Date)
+                .ToListAsync();
+            
+            Console.WriteLine($"[GetQuickStatsAsync] Today range: {todayStartUtc:yyyy-MM-dd HH:mm:ss} to {todayEndUtc:yyyy-MM-dd HH:mm:ss}, Count: {todayTransactions.Count}");
+            
+            // Calculate THIS WEEK in Philippine timezone (Monday to Sunday)
+            var dayOfWeek = (int)philippineNow.DayOfWeek;
+            var daysToMonday = dayOfWeek == 0 ? 6 : dayOfWeek - 1; // Sunday is 0, Monday is 1
+            var weekStartPhilippine = todayPhilippine.AddDays(-daysToMonday);
+            var weekStartUtc = TimeZoneInfo.ConvertTimeToUtc(weekStartPhilippine, philippineTimeZone);
+            var weekEndUtc = weekStartUtc.AddDays(7);
+            
+            var weekTransactions = await _context.UserSubscriptions
+                .Where(s => s.PurchaseDate >= weekStartUtc.Date && s.PurchaseDate < weekEndUtc.Date)
+                .ToListAsync();
+            
+            Console.WriteLine($"[GetQuickStatsAsync] Week range: {weekStartUtc:yyyy-MM-dd HH:mm:ss} to {weekEndUtc:yyyy-MM-dd HH:mm:ss}, Count: {weekTransactions.Count}");
+            
+            // Calculate THIS MONTH in Philippine timezone
+            var monthStartPhilippine = new DateTime(philippineNow.Year, philippineNow.Month, 1, 0, 0, 0, DateTimeKind.Unspecified);
+            var monthStartUtc = TimeZoneInfo.ConvertTimeToUtc(monthStartPhilippine, philippineTimeZone);
+            var monthEndUtc = monthStartUtc.AddMonths(1);
+            
+            var monthTransactions = await _context.UserSubscriptions
+                .Where(s => s.PurchaseDate >= monthStartUtc.Date && s.PurchaseDate < monthEndUtc.Date)
+                .ToListAsync();
+            
+            Console.WriteLine($"[GetQuickStatsAsync] Month range: {monthStartUtc:yyyy-MM-dd HH:mm:ss} to {monthEndUtc:yyyy-MM-dd HH:mm:ss}, Count: {monthTransactions.Count}");
+            
+            // Calculate summaries
+            var todaySummary = new
+            {
+                Transactions = todayTransactions.Count,
+                Amount = todayTransactions.Sum(s => s.PurchaseAmount)
+            };
+            
+            var weekSummary = new
+            {
+                Transactions = weekTransactions.Count,
+                Amount = weekTransactions.Sum(s => s.PurchaseAmount)
+            };
+            
+            var monthSummary = new
+            {
+                Transactions = monthTransactions.Count,
+                Amount = monthTransactions.Sum(s => s.PurchaseAmount)
+            };
+            
+            return new
+            {
+                Today = todaySummary,
+                ThisWeek = weekSummary,
+                ThisMonth = monthSummary,
+                PhilippineDate = philippineNow.ToString("yyyy-MM-dd"),
+                PhilippineTime = philippineNow.ToString("HH:mm:ss")
             };
         }
 
@@ -155,13 +276,13 @@ namespace Study_Hub.Service
         {
             var targetDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
             var startDate = targetDate;
-            var endDate = targetDate.AddDays(1).AddTicks(-1);
+            var endDate = targetDate.AddDays(1);
 
-            // Get all subscriptions for the day
+            // Get all subscriptions for the day using direct date comparison
             var subscriptions = await _context.UserSubscriptions
                 .Include(s => s.User)
                 .Include(s => s.Package)
-                .Where(s => s.PurchaseDate >= startDate && s.PurchaseDate <= endDate)
+                .Where(s => s.PurchaseDate >= startDate && s.PurchaseDate < endDate)
                 .OrderBy(s => s.PurchaseDate)
                 .ToListAsync();
 
@@ -336,13 +457,13 @@ namespace Study_Hub.Service
         public async Task<object> GetSalesReportAsync(ReportPeriod period, DateTime startDate, DateTime endDate)
         {
             var targetStartDate = DateTime.SpecifyKind(startDate.Date, DateTimeKind.Utc);
-            var targetEndDate = DateTime.SpecifyKind(endDate.Date.AddDays(1).AddTicks(-1), DateTimeKind.Utc);
+            var targetEndDate = DateTime.SpecifyKind(endDate.Date.AddDays(1), DateTimeKind.Utc);
 
-            // Get all subscriptions for the period
+            // Get all subscriptions for the period using direct date comparison
             var subscriptions = await _context.UserSubscriptions
                 .Include(s => s.User)
                 .Include(s => s.Package)
-                .Where(s => s.PurchaseDate >= targetStartDate && s.PurchaseDate <= targetEndDate)
+                .Where(s => s.PurchaseDate >= targetStartDate && s.PurchaseDate < targetEndDate)
                 .OrderBy(s => s.PurchaseDate)
                 .ToListAsync();
 

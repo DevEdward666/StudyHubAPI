@@ -65,7 +65,7 @@ namespace Study_Hub.Controllers
         /// Get daily transaction report
         /// </summary>
         [HttpGet("transactions/daily")]
-        public async Task<ActionResult<ApiResponse<TransactionReportResponseDto>>> GetDailyReport([FromQuery] DateTime? date = null)
+        public async Task<ActionResult<ApiResponse<TransactionReportResponseDto>>> GetDailyReport([FromQuery] string? date = null)
         {
             try
             {
@@ -73,7 +73,21 @@ namespace Study_Hub.Controllers
                 if (!await _adminService.IsAdminAsync(userId))
                     return Forbid();
 
-                var report = await _reportService.GetDailyReportAsync(date);
+                // Parse date string as UTC to avoid timezone shifts
+                DateTime? targetDate = null;
+                if (!string.IsNullOrEmpty(date))
+                {
+                    if (DateTime.TryParse(date, out var parsedDate))
+                    {
+                        targetDate = DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Utc);
+                    }
+                    else
+                    {
+                        return BadRequest(ApiResponse<TransactionReportResponseDto>.ErrorResponse("Invalid date format"));
+                    }
+                }
+
+                var report = await _reportService.GetDailyReportAsync(targetDate);
 
                 var response = new TransactionReportResponseDto
                 {
@@ -93,7 +107,7 @@ namespace Study_Hub.Controllers
         /// Get weekly transaction report
         /// </summary>
         [HttpGet("transactions/weekly")]
-        public async Task<ActionResult<ApiResponse<TransactionReportResponseDto>>> GetWeeklyReport([FromQuery] DateTime? weekStartDate = null)
+        public async Task<ActionResult<ApiResponse<TransactionReportResponseDto>>> GetWeeklyReport([FromQuery] string? weekStartDate = null)
         {
             try
             {
@@ -101,7 +115,21 @@ namespace Study_Hub.Controllers
                 if (!await _adminService.IsAdminAsync(userId))
                     return Forbid();
 
-                var report = await _reportService.GetWeeklyReportAsync(weekStartDate);
+                // Parse date string as UTC to avoid timezone shifts
+                DateTime? targetDate = null;
+                if (!string.IsNullOrEmpty(weekStartDate))
+                {
+                    if (DateTime.TryParse(weekStartDate, out var parsedDate))
+                    {
+                        targetDate = DateTime.SpecifyKind(parsedDate.Date, DateTimeKind.Utc);
+                    }
+                    else
+                    {
+                        return BadRequest(ApiResponse<TransactionReportResponseDto>.ErrorResponse("Invalid date format"));
+                    }
+                }
+
+                var report = await _reportService.GetWeeklyReportAsync(targetDate);
 
                 var response = new TransactionReportResponseDto
                 {
@@ -207,28 +235,7 @@ namespace Study_Hub.Controllers
                 if (!await _adminService.IsAdminAsync(userId))
                     return Forbid();
 
-                var today = await _reportService.GetDailyReportAsync();
-                var thisWeek = await _reportService.GetWeeklyReportAsync();
-                var thisMonth = await _reportService.GetMonthlyReportAsync();
-
-                var stats = new
-                {
-                    Today = new
-                    {
-                        Transactions = today.Summary.TotalTransactions,
-                        Amount = today.Summary.TotalAmount
-                    },
-                    ThisWeek = new
-                    {
-                        Transactions = thisWeek.Summary.TotalTransactions,
-                        Amount = thisWeek.Summary.TotalAmount
-                    },
-                    ThisMonth = new
-                    {
-                        Transactions = thisMonth.Summary.TotalTransactions,
-                        Amount = thisMonth.Summary.TotalAmount
-                    }
-                };
+                var stats = await _reportService.GetQuickStatsAsync();
 
                 return Ok(ApiResponse<object>.SuccessResponse(stats, "Quick stats retrieved successfully"));
             }

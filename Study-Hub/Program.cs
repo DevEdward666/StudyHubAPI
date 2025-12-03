@@ -23,8 +23,12 @@ builder.Services.AddControllers()
     });
 
 // Database Configuration
+var connectionString = builder.Environment.IsProduction()
+    ? builder.Configuration.GetConnectionString("ProductionConnection")
+    : builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"),  npgsqlOptions =>
+    options.UseNpgsql(connectionString,  npgsqlOptions =>
     {
         npgsqlOptions.MapEnum<SessionStatus>("session_status");
     }));
@@ -105,32 +109,55 @@ builder.Services.AddCors(options =>
     {
         policy.SetIsOriginAllowed(origin =>
         {
-            // Allow localhost
+            Console.WriteLine($"🔍 CORS Request from origin: {origin}");
+            
+            // Allow localhost with any port
             if (origin.StartsWith("http://localhost") 
-                || origin.StartsWith("https://localhost"))
+                || origin.StartsWith("https://localhost")
+                || origin.StartsWith("http://127.0.0.1")
+                || origin.StartsWith("https://127.0.0.1"))
+            {
+                Console.WriteLine($"✅ CORS: Allowed localhost origin: {origin}");
                 return true;
+            }
             
             // Allow DevTunnels (without trailing slash)
             if (origin.StartsWith("https://3qrbqpcx-5173.asse.devtunnels.ms") 
                 || origin.StartsWith("https://3qrbqpcx-5212.asse.devtunnels.ms"))
+            {
+                Console.WriteLine($"✅ CORS: Allowed DevTunnel origin: {origin}");
                 return true;
+            }
             
             // Allow any devtunnels domain
             if (origin.Contains(".devtunnels.ms"))
+            {
+                Console.WriteLine($"✅ CORS: Allowed DevTunnel domain: {origin}");
                 return true;
+            }
             
             // Allow Vercel deployments
             if (origin.Contains("vercel.app"))
+            {
+                Console.WriteLine($"✅ CORS: Allowed Vercel origin: {origin}");
                 return true;
+            }
             
             // Allow Render deployments
             if (origin.Contains("onrender.com"))
+            {
+                Console.WriteLine($"✅ CORS: Allowed Render origin: {origin}");
                 return true;
+            }
             
             // Allow specific production domains
             if (origin == "https://study-hub-app-nu.vercel.app")
+            {
+                Console.WriteLine($"✅ CORS: Allowed production origin: {origin}");
                 return true;
+            }
             
+            Console.WriteLine($"❌ CORS: Rejected origin: {origin}");
             return false;
         })
         .AllowAnyMethod()

@@ -9,6 +9,7 @@ namespace Study_Hub.Services.Interfaces
         Task<TransactionReportDto> GetWeeklyReportAsync(DateTime? weekStartDate = null);
         Task<TransactionReportDto> GetMonthlyReportAsync(int? year = null, int? month = null);
         Task<string> ExportReportToCsvAsync(ReportPeriod period, DateTime? startDate = null, DateTime? endDate = null);
+        Task<object> GetQuickStatsAsync();
         Task<object> GetDailySalesReportAsync(DateTime date);
         Task<object> GetSalesReportAsync(ReportPeriod period, DateTime startDate, DateTime endDate);
         Task<string> ExportDailySalesReportToCsvAsync(DateTime date);

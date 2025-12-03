@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using Study_Hub.Data;
 using Study_Hub.Models.DTOs;
@@ -21,7 +21,21 @@ namespace Study_Hub.Services
 
         public async Task<bool> IsAdminAsync(Guid userId)
         {
-            return await _context.AdminUsers.AnyAsync(au => au.UserId == userId);
+            // Check if user exists in AdminUsers table OR has Admin/SuperAdmin/Staff role
+            var isInAdminTable = await _context.AdminUsers.AnyAsync(au => au.UserId == userId);
+            
+            if (isInAdminTable)
+                return true;
+            
+            // Also check user role
+            var user = await _context.Users.FindAsync(userId);
+            if (user != null)
+            {
+                var role = user.Role.ToLower();
+                return role == "admin" || role == "superadmin" || role == "staff";
+            }
+            
+            return false;
         }
 
         public async Task<List<UserWithInfoDto>> GetAllUsersAsync()
