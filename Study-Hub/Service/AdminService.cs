@@ -351,11 +351,11 @@ namespace Study_Hub.Services
                 }
 
                 // Validate role
-                var validRoles = new[] { "Staff", "Admin", "Super Admin" };
-                if (!validRoles.Contains(request.Role))
-                {
-                    throw new InvalidOperationException("Invalid role. Must be Staff, Admin, or Super Admin");
-                }
+                // var validRoles = new[] { "Staff", "Admin", "Super Admin" };
+                // if (!validRoles.Contains(request.Role))
+                // {
+                //     throw new InvalidOperationException("Invalid role. Must be Staff, Admin, or Super Admin");
+                // }
 
                 // Create new user
                 var newUser = new User
@@ -451,11 +451,11 @@ namespace Study_Hub.Services
                 }
 
                 // Validate role
-                var validRoles = new[] { "Staff", "Admin", "Super Admin" };
-                if (!validRoles.Contains(request.Role))
-                {
-                    throw new InvalidOperationException("Invalid role. Must be Staff, Admin, or Super Admin");
-                }
+                // var validRoles = new[] { "Staff", "Admin", "Super Admin" };
+                // if (!validRoles.Contains(request.Role))
+                // {
+                //     throw new InvalidOperationException("Invalid role. Must be Staff, Admin, or Super Admin");
+                // }
 
                 var oldRole = user.Role;
                 
